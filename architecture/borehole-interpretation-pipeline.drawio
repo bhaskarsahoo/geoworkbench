@@ -1,0 +1,45 @@
+<mxfile host="app.diagrams.net" modified="2026-05-11T00:00:00.000Z" agent="ChatGPT" version="24.7.17">
+  <diagram id="boreholePipeline" name="Borehole Interpretation Pipeline">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="title" value="GeoWorkbench — Borehole Interpretation Pipeline" style="text;html=1;fontSize=24;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="420" y="20" width="600" height="40" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="input" value="Raw Borehole Data&#xa;- Logs&#xa;- Lithology&#xa;- Assays&#xa;- Geophysics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="100" y="200" width="220" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="clean" value="Data Cleaning & Validation&#xa;- Missing values&#xa;- Interval overlaps&#xa;- Naming normalization" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="400" y="200" width="240" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="features" value="Feature Engineering&#xa;- Depth windows&#xa;- Log relationships&#xa;- Neighbor intervals&#xa;- Statistical features" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="720" y="200" width="240" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ml" value="ML Models&#xa;- XGBoost&#xa;- LightGBM&#xa;- Random Forest&#xa;- Future DL Models" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="200" width="220" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="output" value="AI Interpretation Outputs&#xa;- Lithology predictions&#xa;- Confidence scores&#xa;- Seam suggestions&#xa;- Anomaly flags" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="200" width="240" height="140" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="review" value="Geologist Review & Corrections" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=15;" vertex="1" parent="1">
+          <mxGeometry x="680" y="500" width="320" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" edge="1" parent="1" source="input" target="clean" style="endArrow=block;strokeWidth=2;"/>
+        <mxCell id="e2" edge="1" parent="1" source="clean" target="features" style="endArrow=block;strokeWidth=2;"/>
+        <mxCell id="e3" edge="1" parent="1" source="features" target="ml" style="endArrow=block;strokeWidth=2;"/>
+        <mxCell id="e4" edge="1" parent="1" source="ml" target="output" style="endArrow=block;strokeWidth=2;"/>
+        <mxCell id="e5" edge="1" parent="1" source="output" target="review" style="endArrow=block;strokeWidth=2;"/>
+        <mxCell id="e6" edge="1" parent="1" source="review" target="ml" style="endArrow=block;dashed=1;strokeWidth=2;"/>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
