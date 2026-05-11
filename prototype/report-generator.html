@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GeoWorkbench Report Generator</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+    }
+
+    .header {
+      background: #111827;
+      padding: 18px 24px;
+      border-bottom: 1px solid #1e293b;
+      font-size: 22px;
+    }
+
+    .container {
+      padding: 24px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .panel {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .report-preview {
+      background: white;
+      color: black;
+      border-radius: 10px;
+      padding: 24px;
+      min-height: 500px;
+    }
+
+    .button {
+      background: #2563eb;
+      display: inline-block;
+      padding: 12px 18px;
+      border-radius: 8px;
+      margin-right: 10px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">GeoWorkbench — AI Geological Report Generator</div>
+
+  <div class="container">
+    <div class="panel">
+      <h2>Generate Geological Summary</h2>
+      <p>Project: Talcher Block A</p>
+      <p>Borehole: BH-17</p>
+
+      <div class="button">Generate AI Draft</div>
+      <div class="button">Export PDF</div>
+      <div class="button">Export Excel</div>
+    </div>
+
+    <div class="panel">
+      <h2>AI Generated Draft</h2>
+
+      <div class="report-preview">
+        <h1>Borehole Geological Summary</h1>
+
+        <p>
+          Borehole BH-17 intersected sandstone, shale, coal, and clay sequences.
+          A significant coal seam interval was identified between 28m and 36m depth.
+        </p>
+
+        <p>
+          Seam continuity analysis suggests probable correlation with neighboring boreholes BH-18 and BH-22.
+        </p>
+
+        <p>
+          Geophysical logs indicate elevated resistivity across the coal-bearing interval.
+        </p>
+
+        <p>
+          AI confidence for lithology interpretation: 87%.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
