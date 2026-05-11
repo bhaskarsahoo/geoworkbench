@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GeoWorkbench Import Wizard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+    }
+
+    .header {
+      background: #111827;
+      padding: 18px 24px;
+      border-bottom: 1px solid #1e293b;
+      font-size: 22px;
+    }
+
+    .container {
+      padding: 24px;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .upload-zone {
+      border: 2px dashed #475569;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      margin-top: 16px;
+      background: #111827;
+    }
+
+    .mapping-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .mapping-item {
+      background: #111827;
+      padding: 14px;
+      border-radius: 8px;
+    }
+
+    .button {
+      background: #2563eb;
+      padding: 12px 18px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">GeoWorkbench — Geological Data Import Wizard</div>
+
+  <div class="container">
+    <div class="card">
+      <h2>Upload Geological Dataset</h2>
+      <p>Supported formats: CSV, Excel, LAS</p>
+
+      <div class="upload-zone">
+        Drag & Drop Borehole Files Here
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Detected Geological Fields</h2>
+
+      <div class="mapping-grid">
+        <div class="mapping-item">Depth From → from_depth</div>
+        <div class="mapping-item">Depth To → to_depth</div>
+        <div class="mapping-item">Gamma → gamma_ray</div>
+        <div class="mapping-item">Density → density</div>
+        <div class="mapping-item">Lithology → lithology</div>
+        <div class="mapping-item">Seam → seam_name</div>
+      </div>
+
+      <div class="button">Validate Dataset</div>
+    </div>
+
+    <div class="card">
+      <h2>Validation Results</h2>
+      <ul>
+        <li>3 interval overlaps detected</li>
+        <li>2 missing lithology labels</li>
+        <li>Possible seam naming inconsistency</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
