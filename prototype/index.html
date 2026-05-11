@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoWorkbench Prototype</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: #111827;
+      padding: 20px;
+      box-sizing: border-box;
+      border-right: 1px solid #1e293b;
+    }
+
+    .sidebar h1 {
+      font-size: 22px;
+      margin-bottom: 30px;
+    }
+
+    .nav-item {
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #1e293b;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 64px;
+      background: #111827;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .viewer {
+      flex: 3;
+      padding: 20px;
+      overflow: auto;
+    }
+
+    .assistant {
+      width: 340px;
+      background: #111827;
+      border-left: 1px solid #1e293b;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel {
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .borehole-track {
+      display: flex;
+      height: 420px;
+      margin-top: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .layer {
+      width: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      border-bottom: 1px solid #0f172a;
+    }
+
+    .coal { background: #111111; }
+    .shale { background: #475569; }
+    .sandstone { background: #b45309; }
+    .clay { background: #065f46; }
+
+    .assistant-header {
+      padding: 16px;
+      border-bottom: 1px solid #1e293b;
+      font-weight: bold;
+    }
+
+    .assistant-body {
+      flex: 1;
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .message {
+      background: #1e293b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .input {
+      padding: 16px;
+      border-top: 1px solid #1e293b;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      background: #0f172a;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h1>GeoWorkbench</h1>
+    <div class="nav-item">Dashboard</div>
+    <div class="nav-item">Boreholes</div>
+    <div class="nav-item">Lithology</div>
+    <div class="nav-item">Correlation</div>
+    <div class="nav-item">AI Assistant</div>
+    <div class="nav-item">Reports</div>
+    <div class="nav-item">Settings</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      Coal Geological AI Workspace Prototype
+    </div>
+
+    <div class="workspace">
+      <div class="viewer">
+        <div class="panel">
+          <h2>Borehole BH-17</h2>
+          <p>Talcher Block Exploration Dataset</p>
+
+          <div class="borehole-track">
+            <div style="display:flex;flex-direction:column;width:120px;">
+              <div class="layer sandstone" style="height:90px;">Sandstone</div>
+              <div class="layer shale" style="height:120px;">Shale</div>
+              <div class="layer coal" style="height:80px;">Coal Seam</div>
+              <div class="layer clay" style="height:130px;">Clay</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>AI Interpretation Suggestions</h2>
+          <ul>
+            <li>Coal seam continuity likely between BH-17 and BH-18</li>
+            <li>Possible carbonaceous shale transition at 82m depth</li>
+            <li>Gamma anomaly detected near 110m interval</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="assistant">
+        <div class="assistant-header">Geological AI Assistant</div>
+        <div class="assistant-body">
+          <div class="message">
+            Lithology confidence for seam interval: 87% Coal.
+          </div>
+
+          <div class="message">
+            Seam thickness decreases toward eastern boreholes.
+          </div>
+
+          <div class="message">
+            Draft report summary generated for BH-17.
+          </div>
+        </div>
+
+        <div class="input">
+          <input type="text" placeholder="Ask geological questions..." />
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
