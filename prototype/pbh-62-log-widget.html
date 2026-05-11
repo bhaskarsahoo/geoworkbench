@@ -166,7 +166,7 @@
 
     .track-toggle {
       display: grid;
-      grid-template-columns: 18px 1fr 54px;
+      grid-template-columns: 18px 1fr;
       align-items: center;
       gap: 8px;
       padding: 7px 0;
@@ -178,14 +178,24 @@
       margin: 0;
     }
 
-    .track-toggle select {
-      min-width: 0;
-      border: 1px solid var(--line);
-      background: #15191c;
-      color: var(--text);
-      border-radius: 5px;
-      padding: 3px;
-      font-size: 12px;
+    .track-width-control {
+      grid-column: 2 / 3;
+      display: grid;
+      grid-template-columns: 1fr 44px;
+      align-items: center;
+      gap: 8px;
+      margin: -2px 0 5px;
+    }
+
+    .track-width-control input {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .track-width-control span {
+      text-align: right;
+      font-size: 11px;
+      color: var(--muted);
     }
 
     .range-row {
@@ -260,7 +270,8 @@
       color: #1c2024;
       border: 1px solid #b8b0a1;
       box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
-      width: max-content;
+      width: 100%;
+      min-width: 860px;
     }
 
     .track {
@@ -292,6 +303,16 @@
       font-weight: 700;
       color: #222;
       cursor: context-menu;
+      flex-direction: column;
+      line-height: 1.05;
+    }
+
+    .track-header small {
+      display: block;
+      margin-top: 3px;
+      color: #665f55;
+      font-size: 9px;
+      font-weight: 600;
     }
 
     .track-body {
@@ -355,6 +376,15 @@
       cursor: pointer;
     }
 
+    .seam.compact-label {
+      min-height: 3px;
+      padding-left: 0;
+      border-left-width: 0;
+      border-top: 3px solid #111;
+      background: rgba(17, 17, 17, 0.3);
+      font-size: 0;
+    }
+
     .bar {
       position: absolute;
       left: 12px;
@@ -383,6 +413,10 @@
       font-weight: 700;
     }
 
+    .bar-label.hidden-label {
+      display: none;
+    }
+
     .event {
       position: absolute;
       left: 50%;
@@ -394,6 +428,65 @@
       background: var(--warn);
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
       cursor: pointer;
+    }
+
+    .remark-group {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      min-height: 22px;
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 6px;
+      align-items: center;
+      transform: translateY(-50%);
+      padding: 4px 6px;
+      border: 1px solid rgba(0, 0, 0, 0.18);
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.72);
+      color: #2b2924;
+      cursor: pointer;
+      font-size: 10px;
+      line-height: 1.15;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .remark-group strong {
+      color: #111;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    .remark-group span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .remark-group.clustered {
+      border-color: rgba(224, 161, 45, 0.7);
+      background: rgba(255, 241, 205, 0.92);
+    }
+
+    .group-list {
+      display: grid;
+      gap: 8px;
+      margin: 10px 0 14px;
+    }
+
+    .group-item {
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #15191c;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .group-item strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 3px;
     }
 
     .curve-canvas {
@@ -643,22 +736,24 @@
   <script>
     const data = window.PBH62_DATA;
     const trackDefaults = [
-      { id: "depth", title: "Depth", type: "depth", visible: true, width: 76 },
-      { id: "lithology", title: "Lithology", type: "lithology", visible: true, width: 136 },
-      { id: "seam", title: "Seam", type: "seam", visible: true, width: 86 },
-      { id: "recovery", title: "Recovery", type: "recovery", visible: true, width: 96 },
-      { id: "rqd", title: "RQD", type: "rqd", visible: true, width: 82 },
-      { id: "gamma", title: "Gamma", type: "curve", visible: true, width: 130, curve: "gamma", min: 0, max: 160 },
-      { id: "density", title: "Density", type: "curve", visible: true, width: 130, curve: "density", min: 1.1, max: 2.9 },
-      { id: "remarks", title: "Remarks", type: "remarks", visible: true, width: 84 },
-      { id: "images", title: "Core Box", type: "images", visible: true, width: 90 }
+      { id: "depth", title: "Depth", type: "depth", visible: true, widthPercent: 8 },
+      { id: "lithology", title: "Lithology", type: "lithology", visible: true, widthPercent: 16 },
+      { id: "seam", title: "Seam", type: "seam", visible: true, widthPercent: 9 },
+      { id: "recovery", title: "Recovery", type: "recovery", visible: true, widthPercent: 10 },
+      { id: "rqd", title: "RQD", type: "rqd", visible: true, widthPercent: 8 },
+      { id: "gamma", title: "Gamma", type: "curve", visible: true, widthPercent: 13, curve: "gamma", min: 0, max: 160, unit: "API", source: "demo" },
+      { id: "density", title: "Density", type: "curve", visible: true, widthPercent: 13, curve: "density", min: 1.1, max: 2.9, unit: "g/cc", source: "demo" },
+      { id: "remarks", title: "Remarks", type: "remarks", visible: true, widthPercent: 23 },
+      { id: "images", title: "Photo Ref", type: "images", visible: false, widthPercent: 10 }
     ];
 
     const state = {
       fromDepth: 0,
       toDepth: data.borehole.totalDepth,
+      pixelsPerMeter: 1.15,
       tracks: structuredClone(trackDefaults),
       selected: data.lithologyIntervals.find((item) => item.seamName) || data.lithologyIntervals[0],
+      selectedGroup: null,
       tab: "interval",
       live: false,
       layout: "standard",
@@ -671,8 +766,8 @@
     const minTrackHeight = 680;
 
     function depthToY(depth, height) {
-      const span = Math.max(1, state.toDepth - state.fromDepth);
-      return ((depth - state.fromDepth) / span) * height;
+      const span = Math.max(1, data.borehole.totalDepth);
+      return (depth / span) * height;
     }
 
     function syntheticCurveValue(depth, curve) {
@@ -700,14 +795,11 @@
     }
 
     function visibleIntervals(intervals) {
-      return intervals.filter((item) => item.toDepth >= state.fromDepth && item.fromDepth <= state.toDepth);
+      return intervals;
     }
 
     function trackHeight() {
-      const span = state.toDepth - state.fromDepth;
-      if (state.layout === "wall") return Math.max(minTrackHeight, span * 5.2);
-      if (state.layout === "compact") return Math.max(minTrackHeight, span * 2.4);
-      return Math.max(minTrackHeight, span * 3.2);
+      return Math.max(minTrackHeight, data.borehole.totalDepth * state.pixelsPerMeter);
     }
 
     function render() {
@@ -717,7 +809,7 @@
       document.getElementById("seamCount").textContent = data.summary.seamIntervalCount;
       document.getElementById("fromDepthInput").value = Math.round(state.fromDepth);
       document.getElementById("toDepthInput").value = Math.round(state.toDepth);
-      document.getElementById("windowLabel").textContent = `${state.fromDepth.toFixed(1)}m to ${state.toDepth.toFixed(1)}m`;
+      document.getElementById("windowLabel").textContent = `Virtual range 0.0m to ${data.borehole.totalDepth.toFixed(1)}m · scale ${state.pixelsPerMeter.toFixed(2)} px/m`;
       document.getElementById("modeLabel").textContent = state.live ? "Runtime look: following latest interval feed" : "Historical review mode";
       document.getElementById("modeDot").style.background = state.live ? "var(--warn)" : "var(--accent)";
       renderTrackSettings();
@@ -728,22 +820,52 @@
     function renderTrackSettings() {
       const container = document.getElementById("trackSettings");
       container.innerHTML = "";
+      normalizeVisibleTrackPercents();
       state.tracks.forEach((track) => {
         const row = document.createElement("label");
         row.className = "track-toggle";
         row.innerHTML = `
           <input type="checkbox" ${track.visible ? "checked" : ""} data-track-visible="${track.id}" />
           <span>${track.title}</span>
-          <select data-track-width="${track.id}">
-            <option value="narrow">Narrow</option>
-            <option value="normal">Normal</option>
-            <option value="wide">Wide</option>
-          </select>
+          <div class="track-width-control">
+            <input type="range" min="5" max="45" step="1" value="${track.widthPercent.toFixed(0)}" data-track-width="${track.id}" ${track.visible ? "" : "disabled"} />
+            <span>${track.widthPercent.toFixed(0)}%</span>
+          </div>
         `;
-        const select = row.querySelector("select");
-        select.value = track.width < 90 ? "narrow" : track.width > 125 ? "wide" : "normal";
         container.appendChild(row);
       });
+    }
+
+    function normalizeVisibleTrackPercents() {
+      const visible = state.tracks.filter((track) => track.visible);
+      const hidden = state.tracks.filter((track) => !track.visible);
+      if (!visible.length) return;
+      const total = visible.reduce((sum, track) => sum + track.widthPercent, 0) || 1;
+      visible.forEach((track) => {
+        track.widthPercent = (track.widthPercent / total) * 100;
+      });
+      hidden.forEach((track) => {
+        if (!track.widthPercent) track.widthPercent = 10;
+      });
+    }
+
+    function setTrackPercent(trackId, requestedPercent) {
+      const visible = state.tracks.filter((track) => track.visible);
+      const target = visible.find((track) => track.id === trackId);
+      if (!target || visible.length < 2) return;
+
+      const min = 5;
+      const max = Math.min(60, 100 - min * (visible.length - 1));
+      const nextPercent = Math.max(min, Math.min(max, Number(requestedPercent)));
+      const others = visible.filter((track) => track.id !== trackId);
+      const remaining = 100 - nextPercent;
+      const otherTotal = others.reduce((sum, track) => sum + track.widthPercent, 0) || 1;
+
+      target.widthPercent = nextPercent;
+      others.forEach((track) => {
+        track.widthPercent = Math.max(min, (track.widthPercent / otherTotal) * remaining);
+      });
+      normalizeVisibleTrackPercents();
     }
 
     function renderLog() {
@@ -754,10 +876,10 @@
         if (!track.visible) return;
         const el = document.createElement("div");
         el.className = `track ${track.type}-track`;
-        el.style.width = `${track.width}px`;
+        el.style.width = `${track.widthPercent}%`;
         el.style.height = `${height + 36}px`;
         el.dataset.trackId = track.id;
-        el.innerHTML = `<div class="track-header">${track.title}</div><div class="track-body" style="height:${height}px"></div>`;
+      el.innerHTML = `<div class="track-header">${trackHeader(track)}</div><div class="track-body" style="height:${height}px"></div>`;
         const body = el.querySelector(".track-body");
         body.style.height = `${height}px`;
         addDepthGrid(body, height);
@@ -773,11 +895,18 @@
       });
     }
 
+    function trackHeader(track) {
+      if (track.type === "curve") {
+        return `<div>${track.title}</div><small>${track.min}-${track.max} ${track.unit || ""} · ${track.source === "demo" ? "demo curve" : "real curve"}</small>`;
+      }
+      return `<div>${track.title}</div>`;
+    }
+
     function addDepthGrid(body, height) {
-      const span = state.toDepth - state.fromDepth;
+      const span = data.borehole.totalDepth;
       const step = span > 300 ? 50 : span > 120 ? 20 : span > 50 ? 10 : 5;
-      const start = Math.ceil(state.fromDepth / step) * step;
-      for (let depth = start; depth <= state.toDepth; depth += step) {
+      const start = 0;
+      for (let depth = start; depth <= data.borehole.totalDepth; depth += step) {
         const line = document.createElement("div");
         line.className = "track-grid-line";
         line.style.top = `${depthToY(depth, height)}px`;
@@ -786,10 +915,10 @@
     }
 
     function renderDepthTrack(body, height) {
-      const span = state.toDepth - state.fromDepth;
+      const span = data.borehole.totalDepth;
       const step = span > 300 ? 50 : span > 120 ? 20 : span > 50 ? 10 : 5;
-      const start = Math.ceil(state.fromDepth / step) * step;
-      for (let depth = start; depth <= state.toDepth; depth += step) {
+      const start = 0;
+      for (let depth = start; depth <= data.borehole.totalDepth; depth += step) {
         const tick = document.createElement("div");
         tick.className = "depth-tick";
         tick.style.top = `${depthToY(depth, height)}px`;
@@ -800,8 +929,8 @@
 
     function renderLithologyTrack(body, height) {
       visibleIntervals(data.lithologyIntervals).forEach((interval) => {
-        const top = depthToY(Math.max(interval.fromDepth, state.fromDepth), height);
-        const bottom = depthToY(Math.min(interval.toDepth, state.toDepth), height);
+        const top = depthToY(interval.fromDepth, height);
+        const bottom = depthToY(interval.toDepth, height);
         const el = document.createElement("div");
         el.className = `interval ${isCoalish(interval) ? "coalish" : ""} ${state.selected?.id === interval.id ? "selected" : ""}`;
         el.style.top = `${top}px`;
@@ -817,13 +946,15 @@
 
     function renderSeamTrack(body, height) {
       visibleIntervals(data.seamIntervals).forEach((seam) => {
-        const top = depthToY(Math.max(seam.fromDepth, state.fromDepth), height);
-        const bottom = depthToY(Math.min(seam.toDepth, state.toDepth), height);
+        const top = depthToY(seam.fromDepth, height);
+        const bottom = depthToY(seam.toDepth, height);
+        const intervalHeight = Math.max(3, bottom - top);
+        const hasRoomForLabel = intervalHeight >= 17;
         const el = document.createElement("div");
-        el.className = "seam";
+        el.className = `seam ${hasRoomForLabel ? "" : "compact-label"}`;
         el.style.top = `${top}px`;
-        el.style.height = `${Math.max(18, bottom - top)}px`;
-        el.textContent = seam.name;
+        el.style.height = `${intervalHeight}px`;
+        el.textContent = hasRoomForLabel ? seam.name : "";
         el.title = `${seam.name}: ${seam.fromDepth}-${seam.toDepth}m`;
         el.addEventListener("click", () => {
           const interval = data.lithologyIntervals.find((item) => item.sourceRow === seam.sourceRow);
@@ -836,28 +967,33 @@
 
     function renderRecoveryTrack(body, height) {
       visibleIntervals(data.runIntervals).forEach((run) => {
-        const top = depthToY(Math.max(run.fromDepth, state.fromDepth), height);
-        const bottom = depthToY(Math.min(run.toDepth, state.toDepth), height);
+        const top = depthToY(run.fromDepth, height);
+        const bottom = depthToY(run.toDepth, height);
         const pct = Math.max(0, Math.min(100, run.recoveryPercent || 0));
         const el = document.createElement("div");
         el.className = "bar";
         el.style.top = `${top}px`;
-        el.style.height = `${Math.max(5, bottom - top)}px`;
-        el.innerHTML = `<div class="bar-fill" style="width:${pct}%"></div><div class="bar-label">${pct.toFixed(0)}%</div>`;
+        const barHeight = Math.max(4, bottom - top);
+        el.style.height = `${barHeight}px`;
+        el.innerHTML = `<div class="bar-fill" style="width:${pct}%"></div><div class="bar-label ${barHeight < 15 ? "hidden-label" : ""}">${pct.toFixed(0)}%</div>`;
+        el.title = `${run.fromDepth}-${run.toDepth}m recovery ${pct.toFixed(0)}%`;
         body.appendChild(el);
       });
     }
 
     function renderRqdTrack(body, height) {
       visibleIntervals(data.lithologyIntervals.filter((item) => item.rqd !== null)).forEach((item) => {
-        const top = depthToY(Math.max(item.fromDepth, state.fromDepth), height);
-        const bottom = depthToY(Math.min(item.toDepth, state.toDepth), height);
+        const top = depthToY(item.fromDepth, height);
+        const bottom = depthToY(item.toDepth, height);
         const pct = Math.max(0, Math.min(100, item.rqd * 100));
         const el = document.createElement("div");
         el.className = "bar";
         el.style.top = `${top}px`;
-        el.style.height = `${Math.max(5, bottom - top)}px`;
-        el.innerHTML = `<div class="bar-fill" style="width:${pct}%"></div><div class="bar-label">${pct.toFixed(0)}%</div>`;
+        const barHeight = Math.max(4, bottom - top);
+        el.style.height = `${barHeight}px`;
+        el.innerHTML = `<div class="bar-fill" style="width:${pct}%"></div><div class="bar-label ${barHeight < 15 ? "hidden-label" : ""}">${pct.toFixed(0)}%</div>`;
+        el.title = `${item.fromDepth}-${item.toDepth}m RQD ${pct.toFixed(0)}%`;
+        el.addEventListener("click", () => selectInterval(item));
         body.appendChild(el);
       });
     }
@@ -865,7 +1001,7 @@
     function renderCurveTrack(body, height, track) {
       const canvas = document.createElement("canvas");
       canvas.className = "curve-canvas";
-      const width = track.width;
+      const width = Math.max(80, (surface.clientWidth || 860) * (track.widthPercent / 100));
       const ratio = window.devicePixelRatio || 1;
       canvas.width = width * ratio;
       canvas.height = height * ratio;
@@ -880,7 +1016,7 @@
       ctx.beginPath();
       const samples = 900;
       for (let i = 0; i <= samples; i += 1) {
-        const depth = state.fromDepth + ((state.toDepth - state.fromDepth) * i) / samples;
+        const depth = (data.borehole.totalDepth * i) / samples;
         const value = syntheticCurveValue(depth, track.curve);
         const x = ((value - track.min) / (track.max - track.min)) * (width - 18) + 9;
         const y = depthToY(depth, height);
@@ -891,6 +1027,55 @@
     }
 
     function renderRemarksTrack(body, height) {
+      const visible = visibleIntervals(data.remarks.map((item) => ({ ...item, fromDepth: item.depth, toDepth: item.toDepth || item.depth + 0.2 })))
+        .sort((a, b) => a.depth - b.depth);
+      const groups = groupByScreenDistance(visible, height, 26);
+      groups.forEach((group) => {
+        const first = group[0];
+        const y = depthToY(first.depth, height);
+        const el = document.createElement("div");
+        el.className = `remark-group ${group.length > 1 ? "clustered" : ""}`;
+        el.style.top = `${y}px`;
+        el.title = group.map((item) => `${item.depth}m: ${item.text}`).join("\n");
+        el.innerHTML = group.length > 1
+          ? `<strong>${group.length}</strong><span>${first.depth.toFixed(1)}m group</span>`
+          : `<strong>${first.depth.toFixed(1)}m</strong><span>${first.text}</span>`;
+        el.addEventListener("click", () => {
+          state.selectedGroup = {
+            title: group.length > 1 ? `${group.length} remarks near ${first.depth.toFixed(1)}m` : `Remark at ${first.depth.toFixed(1)}m`,
+            items: group
+          };
+          state.tab = "interval";
+          document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.tab === "interval"));
+          const interval = data.lithologyIntervals.find((item) => item.sourceRow === first.sourceRow);
+          if (interval) state.selected = interval;
+          render();
+        });
+        el.addEventListener("contextmenu", (event) => showContext(event, "remarks", first));
+        body.appendChild(el);
+      });
+    }
+
+    function groupByScreenDistance(items, height, minDistance) {
+      const groups = [];
+      items.forEach((item) => {
+        const y = depthToY(item.depth, height);
+        const lastGroup = groups[groups.length - 1];
+        if (!lastGroup) {
+          groups.push([item]);
+          return;
+        }
+        const lastY = depthToY(lastGroup[lastGroup.length - 1].depth, height);
+        if (Math.abs(y - lastY) < minDistance) {
+          lastGroup.push(item);
+        } else {
+          groups.push([item]);
+        }
+      });
+      return groups;
+    }
+
+    function renderRemarksDotTrack(body, height) {
       visibleIntervals(data.remarks.map((item) => ({ ...item, fromDepth: item.depth, toDepth: item.toDepth || item.depth + 0.2 }))).forEach((remark) => {
         const el = document.createElement("div");
         el.className = "event";
@@ -924,6 +1109,7 @@
 
     function selectInterval(interval) {
       state.selected = interval;
+      state.selectedGroup = null;
       state.tab = "interval";
       document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.tab === "interval"));
       render();
@@ -947,8 +1133,20 @@
         rightBody.innerHTML = `<div class="note">Select an interval to inspect source data, remarks, seam labels, and core image reference.</div>`;
         return;
       }
+      const groupHtml = state.selectedGroup ? `
+        <div class="assistant-card"><strong>${state.selectedGroup.title}</strong> Crowded text is grouped in the track. Click a group to inspect every remark in this side panel.</div>
+        <div class="group-list">
+          ${state.selectedGroup.items.map((item) => `
+            <div class="group-item">
+              <strong>${item.depth}m · source row ${item.sourceRow}</strong>
+              ${item.text}
+            </div>
+          `).join("")}
+        </div>
+      ` : "";
       const image = selected.imageFile || "";
       rightBody.innerHTML = `
+        ${groupHtml}
         <div class="field"><div class="key">Depth</div><div class="value">${selected.fromDepth}m - ${selected.toDepth}m</div></div>
         <div class="field"><div class="key">Lithology</div><div class="value">${selected.lithologyCode} (${selected.lithologyLabel})</div></div>
         <div class="field"><div class="key">Logged color</div><div class="value">${selected.loggedColor || "-"}</div></div>
@@ -969,6 +1167,7 @@
       const selected = state.selected;
       rightBody.innerHTML = `
         <div class="assistant-card"><strong>AI-assisted workflow:</strong> summarize imported lithology, surface validation issues, and help the geologist review seam-bearing intervals without taking control away from them.</div>
+        <div class="assistant-card"><strong>Curve status:</strong> gamma and density are demo curves in this prototype. Real curve tracks will come from LAS, CSV, CoalLog/AGS extensions, or operational feeds when supplied.</div>
         <div class="assistant-card"><strong>Current selection:</strong> ${selected.fromDepth}m to ${selected.toDepth}m is logged as ${selected.lithologyCode}. ${selected.seamName ? `It is marked as seam ${selected.seamName}.` : "No seam label is assigned."}</div>
         <div class="assistant-card"><strong>Seam summary:</strong> ${coalSeams.length} named seam intervals are present: ${coalSeams.map((item) => item.name).join(", ")}.</div>
         <div class="assistant-card"><strong>Potential observations:</strong> carbonaceous and coal-bearing intervals can be filtered, reviewed against core photos, then promoted into report-ready notes.</div>
@@ -989,11 +1188,30 @@
       `;
     }
 
-    function setDepthRange(from, to) {
+    function focusDepthRange(from, to) {
       const total = data.borehole.totalDepth;
-      state.fromDepth = Math.max(0, Math.min(from, total - 1));
-      state.toDepth = Math.max(state.fromDepth + 1, Math.min(to, total));
+      const safeFrom = Math.max(0, Math.min(from, total - 1));
+      const safeTo = Math.max(safeFrom + 1, Math.min(to, total));
+      state.fromDepth = safeFrom;
+      state.toDepth = safeTo;
+      const span = safeTo - safeFrom;
+      state.pixelsPerMeter = Math.max(1.15, Math.min(8, 620 / span));
       render();
+      scrollToDepth(safeFrom);
+    }
+
+    function setScale(pixelsPerMeter) {
+      state.pixelsPerMeter = Math.max(0.85, Math.min(12, pixelsPerMeter));
+      render();
+    }
+
+    function scrollToDepth(depth) {
+      requestAnimationFrame(() => {
+        const height = trackHeight();
+        const y = depthToY(depth, height);
+        const scroller = document.getElementById("logScroll");
+        scroller.scrollTop = Math.max(0, y - 28);
+      });
     }
 
     function showContext(event, trackId, item) {
@@ -1032,47 +1250,50 @@
 
     document.getElementById("trackSettings").addEventListener("change", (event) => {
       const visibleId = event.target.dataset.trackVisible;
-      const widthId = event.target.dataset.trackWidth;
       if (visibleId) {
         state.tracks.find((track) => track.id === visibleId).visible = event.target.checked;
-      }
-      if (widthId) {
-        const track = state.tracks.find((item) => item.id === widthId);
-        const base = trackDefaults.find((item) => item.id === widthId).width;
-        track.width = event.target.value === "narrow" ? Math.max(58, base - 34) : event.target.value === "wide" ? base + 44 : base;
+        normalizeVisibleTrackPercents();
       }
       render();
     });
 
+    document.getElementById("trackSettings").addEventListener("input", (event) => {
+      const widthId = event.target.dataset.trackWidth;
+      if (!widthId) return;
+      setTrackPercent(widthId, event.target.value);
+      render();
+    });
+
     document.getElementById("applyDepthBtn").addEventListener("click", () => {
-      setDepthRange(Number(document.getElementById("fromDepthInput").value), Number(document.getElementById("toDepthInput").value));
+      focusDepthRange(Number(document.getElementById("fromDepthInput").value), Number(document.getElementById("toDepthInput").value));
     });
 
     document.querySelectorAll("[data-preset]").forEach((button) => {
       button.addEventListener("click", () => {
         const preset = button.dataset.preset;
-        if (preset === "full") setDepthRange(0, data.borehole.totalDepth);
-        if (preset === "coal") setDepthRange(320, 565);
-        if (preset === "deep") setDepthRange(520, 604.3);
+        if (preset === "full") {
+          state.fromDepth = 0;
+          state.toDepth = data.borehole.totalDepth;
+          setScale(1.15);
+          scrollToDepth(0);
+        }
+        if (preset === "coal") focusDepthRange(320, 565);
+        if (preset === "deep") focusDepthRange(520, 604.3);
       });
     });
 
     document.getElementById("zoomInBtn").addEventListener("click", () => {
-      const center = (state.fromDepth + state.toDepth) / 2;
-      const span = (state.toDepth - state.fromDepth) * 0.55;
-      setDepthRange(center - span / 2, center + span / 2);
+      setScale(state.pixelsPerMeter * 1.35);
     });
 
     document.getElementById("zoomOutBtn").addEventListener("click", () => {
-      const center = (state.fromDepth + state.toDepth) / 2;
-      const span = (state.toDepth - state.fromDepth) * 1.8;
-      setDepthRange(center - span / 2, center + span / 2);
+      setScale(state.pixelsPerMeter / 1.35);
     });
 
     document.getElementById("liveBtn").addEventListener("click", () => {
       state.live = !state.live;
       if (state.live) {
-        setDepthRange(Math.max(0, data.borehole.totalDepth - 90), data.borehole.totalDepth);
+        focusDepthRange(Math.max(0, data.borehole.totalDepth - 90), data.borehole.totalDepth);
       } else {
         render();
       }
@@ -1083,17 +1304,20 @@
         state.layout = button.dataset.layout;
         document.querySelectorAll("[data-layout]").forEach((item) => item.classList.toggle("active", item === button));
         if (state.layout === "compact") {
+          state.pixelsPerMeter = Math.max(state.pixelsPerMeter, 1.25);
           state.tracks.forEach((track) => {
-            track.visible = ["depth", "lithology", "seam", "remarks", "images"].includes(track.id);
+            track.visible = ["depth", "lithology", "seam", "remarks"].includes(track.id);
           });
         }
         if (state.layout === "standard") {
+          state.pixelsPerMeter = Math.max(1.15, Math.min(state.pixelsPerMeter, 5));
           state.tracks = structuredClone(trackDefaults);
         }
         if (state.layout === "wall") {
+          state.pixelsPerMeter = Math.max(state.pixelsPerMeter, 2.2);
           state.tracks = structuredClone(trackDefaults);
-          state.tracks.forEach((track) => track.width += 18);
         }
+        normalizeVisibleTrackPercents();
         render();
       });
     });

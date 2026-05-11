@@ -82,6 +82,14 @@ Explain that production track settings will support:
 - correlation layouts
 - wall display modes
 
+Curve headers show the current display min/max. In this prototype the gamma and density tracks are clearly marked as demo curves because the geologist workbook does not include real geophysical curve samples.
+
+### 5a. Show Grouped Remarks
+
+The remarks track renders text where space allows and groups crowded remarks into clickable clusters.
+
+Click a clustered remark group to show the full remark list in the side panel. This is the same interaction pattern we can use later for crowded RQD values, validation issues, AI suggestions, or structural events.
+
 ### 6. Show Context Menus
 
 Right-click a track or interval.

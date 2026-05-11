@@ -1,50 +1,158 @@
-<mxfile host="app.diagrams.net" modified="2026-05-11T00:00:00.000Z" agent="ChatGPT" version="24.7.17">
-  <diagram id="geologistWorkflow" name="Geologist Assistance Workflow">
-    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
-      <root>
-        <mxCell id="0"/>
-        <mxCell id="1" parent="0"/>
-
-        <mxCell id="title" value="GeoWorkbench — How It Assists Geologists" style="text;html=1;fontSize=24;fontStyle=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-          <mxGeometry x="470" y="20" width="520" height="40" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="step1" value="1. Import Data&#xa;- Excel / CSV / LAS&#xa;- Borehole logs&#xa;- Lithology sheets&#xa;- Coal quality data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="80" y="150" width="220" height="140" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="step2" value="2. Validate & Standardize&#xa;- Missing intervals&#xa;- Overlaps&#xa;- Naming cleanup&#xa;- Unit checks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="360" y="150" width="220" height="140" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="step3" value="3. Visualize Geology&#xa;- Borehole tracks&#xa;- Lithology intervals&#xa;- Geophysical curves&#xa;- Seam markers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="640" y="150" width="220" height="140" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="step4" value="4. AI Suggestions&#xa;- Lithology support&#xa;- Seam matching&#xa;- Anomaly flags&#xa;- Confidence scores" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="920" y="150" width="220" height="140" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="step5" value="5. Geologist Review&#xa;- Accept&#xa;- Edit&#xa;- Override&#xa;- Add notes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="1200" y="150" width="220" height="140" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="step6" value="6. Generate Outputs&#xa;- Reports&#xa;- Clean datasets&#xa;- Section-ready files&#xa;- Interpretation summaries" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="500" y="430" width="240" height="140" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="step7" value="7. Learn Over Time&#xa;- Correction history&#xa;- Local model adaptation&#xa;- Geological memory&#xa;- Better suggestions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="820" y="430" width="240" height="140" as="geometry"/>
-        </mxCell>
-
-        <mxCell id="e1" edge="1" parent="1" source="step1" target="step2" style="endArrow=block;strokeWidth=2;"/>
-        <mxCell id="e2" edge="1" parent="1" source="step2" target="step3" style="endArrow=block;strokeWidth=2;"/>
-        <mxCell id="e3" edge="1" parent="1" source="step3" target="step4" style="endArrow=block;strokeWidth=2;"/>
-        <mxCell id="e4" edge="1" parent="1" source="step4" target="step5" style="endArrow=block;strokeWidth=2;"/>
-        <mxCell id="e5" edge="1" parent="1" source="step5" target="step6" style="endArrow=block;strokeWidth=2;"/>
-        <mxCell id="e6" edge="1" parent="1" source="step5" target="step7" style="endArrow=block;strokeWidth=2;"/>
-        <mxCell id="e7" edge="1" parent="1" source="step7" target="step4" style="endArrow=block;dashed=1;strokeWidth=2;"/>
-      </root>
-    </mxGraphModel>
-  </diagram>
+<mxfile host="65bd71144e">
+    <diagram id="geologistWorkflow" name="Geologist Assistance Workflow">
+        <mxGraphModel dx="1030" dy="851" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="960" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="GeoWorkbench - Geologist Assistance Workflow" style="text;html=1;fontSize=26;fontStyle=1;strokeColor=none;fillColor=none;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="440" y="20" width="720" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="subtitle" value="The geologist stays in control while the system reduces import, validation, review, and reporting effort" style="text;html=1;fontSize=13;fontColor=#666666;strokeColor=none;fillColor=none;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="60" width="840" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="swim_geologist" value="Geologist" style="swimlane;html=1;rounded=0;startSize=34;fontStyle=1;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="120" width="1500" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="g1" value="Provide PBH-62 Inputs&#xa;workbook + core images" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" parent="swim_geologist" vertex="1">
+                    <mxGeometry x="40" y="58" width="190" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="g2" value="Review Imported Log&#xa;check familiar borehole view" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" parent="swim_geologist" vertex="1">
+                    <mxGeometry x="320" y="58" width="190" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="g3" value="Inspect Intervals&#xa;lithology, seams, RQD, remarks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" parent="swim_geologist" vertex="1">
+                    <mxGeometry x="605" y="58" width="205" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="g4" value="Correct and Annotate&#xa;edit, accept, reject, add notes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" parent="swim_geologist" vertex="1">
+                    <mxGeometry x="905" y="58" width="205" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="g5" value="Approve Outputs&#xa;reports, exports, correlation inputs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" parent="swim_geologist" vertex="1">
+                    <mxGeometry x="1210" y="58" width="210" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="swim_workbench" value="GeoWorkbench" style="swimlane;html=1;rounded=0;startSize=34;fontStyle=1;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="315" width="1500" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="w1" value="Import and Normalize&#xa;source rows preserved" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" parent="swim_workbench" vertex="1">
+                    <mxGeometry x="40" y="64" width="190" height="82" as="geometry"/>
+                </mxCell>
+                <mxCell id="w2" value="Validate Data&#xa;gaps, overlaps, recovery, codes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" parent="swim_workbench" vertex="1">
+                    <mxGeometry x="320" y="64" width="190" height="82" as="geometry"/>
+                </mxCell>
+                <mxCell id="w3" value="Render Log Widget&#xa;tracks, curves, zoom, scroll" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" parent="swim_workbench" vertex="1">
+                    <mxGeometry x="605" y="64" width="205" height="82" as="geometry"/>
+                </mxCell>
+                <mxCell id="w4" value="Capture Review State&#xa;remarks, decisions, source lineage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" parent="swim_workbench" vertex="1">
+                    <mxGeometry x="905" y="64" width="205" height="82" as="geometry"/>
+                </mxCell>
+                <mxCell id="w5" value="Generate Export Package&#xa;clean data, report draft, section data" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" parent="swim_workbench" vertex="1">
+                    <mxGeometry x="1210" y="64" width="210" height="82" as="geometry"/>
+                </mxCell>
+                <mxCell id="swim_ai" value="AI Assistance" style="swimlane;html=1;rounded=0;startSize=34;fontStyle=1;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="570" width="1500" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="ai1" value="Summarize Borehole&#xa;coal-bearing zones, major units" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" parent="swim_ai" vertex="1">
+                    <mxGeometry x="320" y="52" width="190" height="76" as="geometry"/>
+                </mxCell>
+                <mxCell id="ai2" value="Suggest Review Focus&#xa;thin seams, remarks, anomalies" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" parent="swim_ai" vertex="1">
+                    <mxGeometry x="605" y="52" width="205" height="76" as="geometry"/>
+                </mxCell>
+                <mxCell id="ai3" value="Draft Report Text&#xa;editable observations with evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" parent="swim_ai" vertex="1">
+                    <mxGeometry x="905" y="52" width="205" height="76" as="geometry"/>
+                </mxCell>
+                <mxCell id="ai4" value="Learn From Corrections&#xa;future local adaptation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;dashed=1;" parent="swim_ai" vertex="1">
+                    <mxGeometry x="1210" y="52" width="210" height="76" as="geometry"/>
+                </mxCell>
+                <mxCell id="swim_outputs" value="Outputs and Learning" style="swimlane;html=1;rounded=0;startSize=34;fontStyle=1;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="755" width="1500" height="145" as="geometry"/>
+                </mxCell>
+                <mxCell id="o1" value="Reviewed Interpretation&#xa;geologist-approved intervals" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;" parent="swim_outputs" vertex="1">
+                    <mxGeometry x="320" y="48" width="190" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="o2" value="Stakeholder Demo&#xa;credible PBH-62 workflow" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;" parent="swim_outputs" vertex="1">
+                    <mxGeometry x="605" y="48" width="205" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="o3" value="MVP Feedback Loop&#xa;requirements, layouts, priorities" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;" parent="swim_outputs" vertex="1">
+                    <mxGeometry x="905" y="48" width="205" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="eg1" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#546a7b;" parent="1" source="g1" target="w1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ew1" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#546a7b;" parent="1" source="w1" target="w2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ew2" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#546a7b;" parent="1" source="w2" target="w3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ew3g2" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#546a7b;edgeStyle=orthogonalEdgeStyle;" parent="1" source="w3" target="g2" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="758" y="360"/>
+                            <mxPoint x="465" y="360"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="g2g3" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#546a7b;" parent="1" source="g2" target="g3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="g3w4" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#546a7b;edgeStyle=orthogonalEdgeStyle;" parent="1" source="g3" target="w4" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="900" y="218"/>
+                            <mxPoint x="900" y="420"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w4g4" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#546a7b;" parent="1" source="w4" target="g4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="g4w5" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#546a7b;edgeStyle=orthogonalEdgeStyle;" parent="1" source="g4" target="w5" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1058" y="270"/>
+                            <mxPoint x="1365" y="270"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w5g5" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#546a7b;" parent="1" source="w5" target="g5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ai_link1" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#9673a6;edgeStyle=orthogonalEdgeStyle;" parent="1" source="w3" target="ai1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="758" y="490"/>
+                            <mxPoint x="465" y="490"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ai_link2" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#9673a6;" parent="1" source="ai1" target="ai2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ai_link3" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#9673a6;" parent="1" source="ai2" target="ai3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ai_link4" style="endArrow=block;html=1;strokeWidth=2;dashed=1;strokeColor=#9673a6;edgeStyle=orthogonalEdgeStyle;" parent="1" source="g4" target="ai4" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1058" y="170"/>
+                            <mxPoint x="1510" y="170"/>
+                            <mxPoint x="1510" y="660"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="out1" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#b85450;edgeStyle=orthogonalEdgeStyle;" parent="1" source="g5" target="o1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1365" y="280"/>
+                            <mxPoint x="520" y="280"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="out2" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#b85450;" parent="1" source="o1" target="o2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="out3" style="endArrow=block;html=1;strokeWidth=2;strokeColor=#b85450;" parent="1" source="o2" target="o3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
 </mxfile>
