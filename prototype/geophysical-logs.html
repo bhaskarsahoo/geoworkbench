@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GeoWorkbench Geophysical Logs</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+    }
+
+    .header {
+      background: #111827;
+      padding: 18px 24px;
+      border-bottom: 1px solid #1e293b;
+      font-size: 22px;
+    }
+
+    .workspace {
+      display: flex;
+      height: calc(100vh - 60px);
+    }
+
+    .sidebar {
+      width: 260px;
+      background: #111827;
+      border-right: 1px solid #1e293b;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .main {
+      flex: 1;
+      padding: 20px;
+      overflow: auto;
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .logs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .track {
+      background: #111827;
+      border-radius: 10px;
+      padding: 12px;
+      height: 500px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .curve {
+      position: absolute;
+      width: 2px;
+      background: #22c55e;
+      bottom: 0;
+    }
+
+    .curve2 {
+      background: #38bdf8;
+    }
+
+    .curve3 {
+      background: #f59e0b;
+    }
+
+    .label {
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">GeoWorkbench — Geophysical Log Workspace</div>
+
+  <div class="workspace">
+    <div class="sidebar">
+      <h3>Borehole</h3>
+      <div class="card">
+        <p>BH-17</p>
+        <p>Total Depth: 148m</p>
+        <p>Project: Talcher Block A</p>
+      </div>
+
+      <h3>Active Curves</h3>
+      <div class="card">
+        <p>Gamma Ray</p>
+        <p>Density</p>
+        <p>Resistivity</p>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="card">
+        <h2>Geophysical Curves</h2>
+        <p>Interactive log interpretation workspace with AI-assisted anomaly detection.</p>
+
+        <div class="logs">
+          <div class="track">
+            <div class="label">Gamma Ray</div>
+            <div class="curve" style="left:30%;height:80%;"></div>
+            <div class="curve" style="left:45%;height:60%;"></div>
+            <div class="curve" style="left:60%;height:90%;"></div>
+          </div>
+
+          <div class="track">
+            <div class="label">Density</div>
+            <div class="curve curve2" style="left:25%;height:70%;"></div>
+            <div class="curve curve2" style="left:50%;height:85%;"></div>
+            <div class="curve curve2" style="left:70%;height:40%;"></div>
+          </div>
+
+          <div class="track">
+            <div class="label">Resistivity</div>
+            <div class="curve curve3" style="left:20%;height:50%;"></div>
+            <div class="curve curve3" style="left:55%;height:95%;"></div>
+            <div class="curve curve3" style="left:75%;height:65%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>AI Geological Interpretation</h2>
+        <ul>
+          <li>High resistivity interval likely associated with coal seam.</li>
+          <li>Gamma anomaly detected near 92m interval.</li>
+          <li>Possible lithology transition between shale and carbonaceous shale.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
