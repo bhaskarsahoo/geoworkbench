@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GeoWorkbench Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+    }
+
+    .header {
+      padding: 20px;
+      background: #111827;
+      border-bottom: 1px solid #1e293b;
+      font-size: 22px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 12px;
+    }
+
+    .metric {
+      font-size: 42px;
+      margin-top: 10px;
+    }
+
+    .project-list {
+      margin-top: 10px;
+    }
+
+    .project {
+      padding: 10px;
+      background: #0f172a;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    GeoWorkbench — Geological Project Dashboard
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Total Boreholes</h3>
+      <div class="metric">218</div>
+    </div>
+
+    <div class="card">
+      <h3>AI Interpretation Confidence</h3>
+      <div class="metric">84%</div>
+    </div>
+
+    <div class="card">
+      <h3>Active Geological Projects</h3>
+      <div class="metric">6</div>
+    </div>
+
+    <div class="card">
+      <h3>Recent Projects</h3>
+      <div class="project-list">
+        <div class="project">Talcher Block A</div>
+        <div class="project">Ib Valley Extension</div>
+        <div class="project">Coal Seam Correlation Study</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>AI Alerts</h3>
+      <ul>
+        <li>Possible seam discontinuity detected</li>
+        <li>3 boreholes contain interval overlaps</li>
+        <li>Coal quality anomaly in Seam-B</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Next Suggested Actions</h3>
+      <ul>
+        <li>Review seam continuity in BH-18</li>
+        <li>Validate lithology intervals</li>
+        <li>Generate geological summary report</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
