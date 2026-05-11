@@ -1,0 +1,9 @@
+borehole_id,from_depth,to_depth,lithology,gamma_ray,density,resistivity,seam_name,ash,gcv
+BH-17,0,12,Sandstone,72,2.45,120,,,
+BH-17,12,28,Shale,110,2.62,90,,,
+BH-17,28,36,Coal,48,1.35,240,Seam-A,22,5100
+BH-17,36,48,Clay,88,2.10,70,,,
+BH-18,0,10,Sandstone,70,2.41,118,,,
+BH-18,10,24,Shale,108,2.60,88,,,
+BH-18,24,34,Coal,45,1.31,255,Seam-A,20,5250
+BH-18,34,46,Clay,90,2.08,74,,,
