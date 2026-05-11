@@ -48,6 +48,16 @@ geoworkbench/
 
 Planning and discovery phase.
 
+## Current Prototype
+
+The current stakeholder prototype uses the geologist-provided PBH-62 workbook and core image folder:
+
+- Prototype screen: `prototype/pbh-62-log-widget.html`
+- Normalized dataset: `sample-data/pbh-62-normalized.json`
+- Data extractor: `scripts/extract_pbh62_workbook.py`
+- Data mapping: `docs/pbh-62-data-mapping.md`
+- Demo walkthrough: `docs/pbh-62-stakeholder-demo-walkthrough.md`
+
 Next priorities:
 
 - Review real sample geological data
