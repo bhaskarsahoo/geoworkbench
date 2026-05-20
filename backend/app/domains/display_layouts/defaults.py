@@ -1,0 +1,86 @@
+def default_borehole_layout() -> dict:
+    return {
+        "schemaVersion": 1,
+        "mode": "runtime",
+        "regions": {
+            "left": ["borehole-summary", "track-settings"],
+            "center": ["log-widget"],
+            "right": ["interval-details", "ai-suggestions"],
+        },
+        "widgets": {
+            "log-widget": {
+                "type": "logWidget",
+                "title": "Borehole Log",
+                "tracks": [
+                    {"id": "depth", "type": "depthAxis", "title": "Depth", "visible": True, "width": 70},
+                    {
+                        "id": "lithology",
+                        "type": "lithology",
+                        "title": "Lithology",
+                        "visible": True,
+                        "width": 180,
+                    },
+                    {"id": "seam", "type": "seam", "title": "Seam", "visible": True, "width": 90},
+                    {
+                        "id": "recovery",
+                        "type": "quantitativeBar",
+                        "title": "Recovery",
+                        "visible": True,
+                        "width": 110,
+                        "valueField": "recovery_percent",
+                        "unit": "%",
+                        "min": 0,
+                        "max": 100,
+                        "color": "#55b7aa",
+                    },
+                    {
+                        "id": "rqd",
+                        "type": "quantitativeBar",
+                        "title": "RQD",
+                        "visible": True,
+                        "width": 100,
+                        "valueField": "rqd",
+                        "unit": "%",
+                        "min": 0,
+                        "max": 100,
+                        "valueMultiplier": 100,
+                        "color": "#55b7aa",
+                    },
+                    {
+                        "id": "curves",
+                        "type": "curve",
+                        "title": "Curves",
+                        "visible": True,
+                        "width": 260,
+                        "curves": [
+                            {
+                                "curveKey": "gamma",
+                                "label": "Gamma",
+                                "unit": "API",
+                                "color": "#d97706",
+                                "visible": True,
+                                "scale": {"mode": "manual", "min": 0, "max": 150},
+                                "normalization": {"enabled": True, "method": "linear-track-scale"},
+                            },
+                            {
+                                "curveKey": "resistivity",
+                                "label": "Resistivity",
+                                "unit": "ohm.m",
+                                "color": "#2563eb",
+                                "visible": True,
+                                "scale": {"mode": "manual", "min": 0, "max": 80},
+                                "normalization": {"enabled": True, "method": "linear-track-scale"},
+                            },
+                        ],
+                    },
+                    {
+                        "id": "remarks",
+                        "type": "remarks",
+                        "title": "Remarks",
+                        "visible": True,
+                        "width": 220,
+                    },
+                ],
+            }
+        },
+    }
