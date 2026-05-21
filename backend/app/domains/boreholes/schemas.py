@@ -6,6 +6,7 @@ class BoreholeListItem(BaseModel):
     code: str
     title: str
     total_depth: float
+    workflow_status: str
     site_code: str
     project_code: str
 
@@ -90,6 +91,41 @@ class DisplayLayoutOut(BaseModel):
     settings: dict
 
 
+class ValidationIssueOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    code: str
+    severity: str
+    message: str
+    from_depth: float | None
+    to_depth: float | None
+    entity_type: str | None
+    entity_id: str | None
+    status: str
+    issue_metadata: dict | None
+
+
+class SourceImportOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    import_type: str
+    source_name: str
+    status: str
+    summary: dict | None
+
+
+class FieldSubmissionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    submission_type: str
+    status: str
+    submitted_by: str | None
+    payload: dict | None
+
+
 class BoreholeWorkbenchOut(BaseModel):
     id: int
     code: str
@@ -99,10 +135,12 @@ class BoreholeWorkbenchOut(BaseModel):
     closure_note: str | None
     source_workbook: str | None
     source_sheet: str | None
+    workflow_status: str
     lithology_intervals: list[LithologyIntervalOut]
     seam_intervals: list[SeamIntervalOut]
     curves: list[CurveOut]
     core_images: list[CoreImageOut]
     layout: DisplayLayoutOut | None
-    validation_issues: list[dict]
-
+    validation_issues: list[ValidationIssueOut]
+    source_imports: list[SourceImportOut]
+    field_submissions: list[FieldSubmissionOut]

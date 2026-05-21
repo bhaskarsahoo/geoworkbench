@@ -3,6 +3,7 @@ export type BoreholeListItem = {
   code: string;
   title: string;
   total_depth: number;
+  workflow_status: string;
   site_code: string;
   project_code: string;
 };
@@ -96,6 +97,35 @@ export type DisplayTrack = {
   color?: string;
 };
 
+export type ValidationIssue = {
+  id: number;
+  code: string;
+  severity: "error" | "warning" | "info" | string;
+  message: string;
+  from_depth: number | null;
+  to_depth: number | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  status: string;
+  issue_metadata: Record<string, unknown> | null;
+};
+
+export type SourceImport = {
+  id: number;
+  import_type: string;
+  source_name: string;
+  status: string;
+  summary: Record<string, unknown> | null;
+};
+
+export type FieldSubmission = {
+  id: number;
+  submission_type: string;
+  status: string;
+  submitted_by: string | null;
+  payload: Record<string, unknown> | null;
+};
+
 export type BoreholeWorkbench = {
   id: number;
   code: string;
@@ -105,10 +135,13 @@ export type BoreholeWorkbench = {
   closure_note: string | null;
   source_workbook: string | null;
   source_sheet: string | null;
+  workflow_status: string;
   lithology_intervals: LithologyInterval[];
   seam_intervals: SeamInterval[];
   curves: Curve[];
   core_images: CoreImage[];
   layout: DisplayLayout | null;
-  validation_issues: unknown[];
+  validation_issues: ValidationIssue[];
+  source_imports: SourceImport[];
+  field_submissions: FieldSubmission[];
 };

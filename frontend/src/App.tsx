@@ -67,7 +67,7 @@ export function App() {
           >
             {boreholes.data?.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.project_code} / {item.site_code} / {item.code}
+                {item.project_code} / {item.site_code} / {item.code} · {item.workflow_status}
               </option>
             ))}
           </select>
@@ -91,6 +91,10 @@ export function App() {
       <section className="workspace">
         <aside className="side-panel">
           <h2>Project</h2>
+          <div className="status-card">
+            <strong>{workbench.data?.code ?? "-"}</strong>
+            <span>{workbench.data?.workflow_status.replaceAll("_", " ") ?? "-"}</span>
+          </div>
           <div className="metric-grid">
             <div className="metric">
               <b>{workbench.data?.total_depth ?? "-"} m</b>
@@ -126,6 +130,60 @@ export function App() {
               </li>
             ))}
           </ul>
+
+          <h2>Validation</h2>
+          <div className="validation-summary">
+            <span>
+              {workbench.data?.validation_issues.filter((issue) => issue.severity === "error").length ??
+                0}{" "}
+              errors
+            </span>
+            <span>
+              {workbench.data?.validation_issues.filter((issue) => issue.severity === "warning").length ??
+                0}{" "}
+              warnings
+            </span>
+            <span>
+              {workbench.data?.validation_issues.filter((issue) => issue.severity === "info").length ??
+                0}{" "}
+              info
+            </span>
+          </div>
+          <div className="validation-list">
+            {workbench.data?.validation_issues.slice(0, 8).map((issue) => (
+              <button
+                key={issue.id}
+                type="button"
+                className={`validation-item ${issue.severity}`}
+                onClick={() => {
+                  if (issue.from_depth !== null) {
+                    useWorkbenchStore.getState().setSelectedDepth(issue.from_depth);
+                  }
+                }}
+              >
+                <strong>{issue.severity}</strong>
+                <span>{issue.message}</span>
+              </button>
+            ))}
+          </div>
+
+          <h2>Data Arrival</h2>
+          <div className="arrival-list">
+            {workbench.data?.source_imports.map((item) => (
+              <div key={`import:${item.id}`} className="arrival-item">
+                <strong>{item.import_type}</strong>
+                <span>{item.status}</span>
+                <small>{item.source_name}</small>
+              </div>
+            ))}
+            {workbench.data?.field_submissions.map((item) => (
+              <div key={`submission:${item.id}`} className="arrival-item">
+                <strong>{item.submission_type}</strong>
+                <span>{item.status}</span>
+                <small>{item.submitted_by ?? "field user"}</small>
+              </div>
+            ))}
+          </div>
         </aside>
 
         <section className="log-region">

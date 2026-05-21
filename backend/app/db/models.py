@@ -42,6 +42,7 @@ class Borehole(Base):
     closure_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_workbook: Mapped[str | None] = mapped_column(String(255), nullable=True)
     source_sheet: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    workflow_status: Mapped[str] = mapped_column(String(80), default="ready_for_central_review", index=True)
 
     site: Mapped[Site] = relationship(back_populates="boreholes")
     lithology_intervals: Mapped[list["LithologyInterval"]] = relationship(
@@ -55,6 +56,15 @@ class Borehole(Base):
         back_populates="borehole", cascade="all, delete-orphan"
     )
     display_layouts: Mapped[list["DisplayLayout"]] = relationship(
+        back_populates="borehole", cascade="all, delete-orphan"
+    )
+    validation_issues: Mapped[list["ValidationIssue"]] = relationship(
+        back_populates="borehole", cascade="all, delete-orphan"
+    )
+    source_imports: Mapped[list["SourceImport"]] = relationship(
+        back_populates="borehole", cascade="all, delete-orphan"
+    )
+    field_submissions: Mapped[list["FieldSubmission"]] = relationship(
         back_populates="borehole", cascade="all, delete-orphan"
     )
 
@@ -97,6 +107,59 @@ class CorrectionAudit(Base):
     change_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     before_values: Mapped[dict] = mapped_column(JSON)
     after_values: Mapped[dict] = mapped_column(JSON)
+
+
+class ValidationIssue(Base):
+    __tablename__ = "validation_issues"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    borehole_id: Mapped[int] = mapped_column(ForeignKey("boreholes.id"), index=True)
+    code: Mapped[str] = mapped_column(String(120), index=True)
+    severity: Mapped[str] = mapped_column(String(40), index=True)
+    message: Mapped[str] = mapped_column(Text)
+    from_depth: Mapped[float | None] = mapped_column(Float, nullable=True)
+    to_depth: Mapped[float | None] = mapped_column(Float, nullable=True)
+    entity_type: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    entity_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    status: Mapped[str] = mapped_column(String(40), default="open", index=True)
+    issue_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    borehole: Mapped[Borehole] = relationship(back_populates="validation_issues")
+
+
+class SourceImport(Base):
+    __tablename__ = "source_imports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    borehole_id: Mapped[int] = mapped_column(ForeignKey("boreholes.id"), index=True)
+    import_type: Mapped[str] = mapped_column(String(80), index=True)
+    source_name: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(80), default="parsed", index=True)
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    summary: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    borehole: Mapped[Borehole] = relationship(back_populates="source_imports")
+
+
+class FieldSubmission(Base):
+    __tablename__ = "field_submissions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    borehole_id: Mapped[int] = mapped_column(ForeignKey("boreholes.id"), index=True)
+    submission_type: Mapped[str] = mapped_column(String(80), index=True)
+    status: Mapped[str] = mapped_column(String(80), default="synced", index=True)
+    submitted_by: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+    borehole: Mapped[Borehole] = relationship(back_populates="field_submissions")
 
 
 class SeamInterval(Base):

@@ -121,6 +121,33 @@ h2 {
   gap: 8px;
 }
 
+.status-card,
+.arrival-item {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #2e363d;
+  border-radius: 6px;
+  background: #111518;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.status-card span,
+.arrival-item span {
+  color: #62c4b7;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.arrival-list {
+  display: grid;
+  gap: 7px;
+}
+
+.arrival-item small {
+  color: #9ca8b1;
+}
+
 .metric,
 .settings-note,
 .empty {
@@ -152,6 +179,54 @@ h2 {
   justify-content: space-between;
   padding: 7px 0;
   border-bottom: 1px solid #2e363d;
+}
+
+.validation-summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+  color: #d5dee4;
+  font-size: 12px;
+}
+
+.validation-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.validation-item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid #33404a;
+  border-radius: 6px;
+  background: #111518;
+  padding: 8px;
+  text-align: left;
+}
+
+.validation-item strong {
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.validation-item span {
+  color: #dce6eb;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.validation-item.error {
+  border-color: #b05252;
+}
+
+.validation-item.warning {
+  border-color: #b9862f;
+}
+
+.validation-item.info {
+  border-color: #3e6f96;
 }
 
 .log-region {

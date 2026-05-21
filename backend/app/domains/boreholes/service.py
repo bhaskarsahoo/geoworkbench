@@ -26,6 +26,7 @@ def list_boreholes(db: Session) -> list[BoreholeListItem]:
             code=borehole.code,
             title=borehole.title,
             total_depth=borehole.total_depth,
+            workflow_status=borehole.workflow_status,
             site_code=site.code,
             project_code=project.code,
         )
@@ -42,6 +43,9 @@ def get_workbench(db: Session, borehole_id: int) -> BoreholeWorkbenchOut:
             selectinload(Borehole.seam_intervals),
             selectinload(Borehole.core_images),
             selectinload(Borehole.display_layouts),
+            selectinload(Borehole.validation_issues),
+            selectinload(Borehole.source_imports),
+            selectinload(Borehole.field_submissions),
             selectinload(Borehole.curves).selectinload(Curve.samples),
         )
     )
@@ -86,6 +90,7 @@ def get_workbench(db: Session, borehole_id: int) -> BoreholeWorkbenchOut:
         closure_note=borehole.closure_note,
         source_workbook=borehole.source_workbook,
         source_sheet=borehole.source_sheet,
+        workflow_status=borehole.workflow_status,
         lithology_intervals=sorted(borehole.lithology_intervals, key=lambda item: item.from_depth),
         seam_intervals=sorted(borehole.seam_intervals, key=lambda item: item.from_depth),
         curves=curves,
@@ -98,7 +103,15 @@ def get_workbench(db: Session, borehole_id: int) -> BoreholeWorkbenchOut:
         )
         if layout
         else None,
-        validation_issues=[],
+        validation_issues=sorted(
+            borehole.validation_issues,
+            key=lambda item: (
+                {"error": 0, "warning": 1, "info": 2}.get(item.severity, 3),
+                item.from_depth if item.from_depth is not None else -1,
+            ),
+        ),
+        source_imports=sorted(borehole.source_imports, key=lambda item: item.id),
+        field_submissions=sorted(borehole.field_submissions, key=lambda item: item.id),
     )
 
 
