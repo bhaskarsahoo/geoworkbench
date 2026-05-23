@@ -10,6 +10,11 @@ app/domains/boreholes/router.py
 app/domains/boreholes/schemas.py
 app/domains/boreholes/service.py
 app/domains/display_layouts/defaults.py
+app/domains/imports/router.py
+app/domains/imports/schemas.py
+app/domains/imports/service.py
+app/domains/validation/router.py
+app/services/validation/borehole_validation.py
 geoworkbench_backend.egg-info/PKG-INFO
 geoworkbench_backend.egg-info/SOURCES.txt
 geoworkbench_backend.egg-info/dependency_links.txt

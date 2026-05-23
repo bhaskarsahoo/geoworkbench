@@ -8,12 +8,19 @@ export type BoreholeListItem = {
   project_code: string;
 };
 
+export type BoreholeStatus = {
+  id: number;
+  code: string;
+  workflow_status: string;
+  message: string;
+};
+
 export type LithologyInterval = {
   id: string;
   source_row: number | null;
   from_depth: number;
   to_depth: number;
-  lithology_code: string;
+  lithology_code: string | null;
   lithology_label: string;
   display_color: string | null;
   logged_color: string | null;
@@ -110,6 +117,31 @@ export type ValidationIssue = {
   issue_metadata: Record<string, unknown> | null;
 };
 
+export type AiSuggestion = {
+  id: number;
+  validation_issue_id: number | null;
+  suggestion_type: string;
+  title: string;
+  rationale: string;
+  recommended_action: string;
+  confidence: number | null;
+  status: string;
+  provider: string;
+  from_depth: number | null;
+  to_depth: number | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  patch: Record<string, unknown> | null;
+  evidence: Record<string, unknown> | null;
+};
+
+export type BoreholeAiSummary = {
+  borehole_id: number;
+  title: string;
+  summary: string;
+  metrics: Record<string, unknown>;
+};
+
 export type SourceImport = {
   id: number;
   import_type: string;
@@ -124,6 +156,48 @@ export type FieldSubmission = {
   status: string;
   submitted_by: string | null;
   payload: Record<string, unknown> | null;
+};
+
+export type SourceFile = {
+  id: number;
+  borehole_id: number | null;
+  source_import_id: number | null;
+  file_type: string;
+  original_name: string;
+  storage_path: string;
+  status: string;
+  file_metadata: Record<string, unknown> | null;
+};
+
+export type ImportProfile = {
+  id: number;
+  name: string;
+  profile_type: string;
+  description: string | null;
+  mapping: Record<string, unknown>;
+};
+
+export type ExportReadiness = {
+  borehole_id: number;
+  ready: boolean;
+  status: string;
+  checks: Array<{
+    key: string;
+    label: string;
+    status: "pass" | "warning" | "fail" | string;
+    detail: string;
+  }>;
+  counts: Record<string, number>;
+};
+
+export type ExportJob = {
+  id: number;
+  borehole_id: number;
+  export_type: string;
+  status: string;
+  file_path: string;
+  file_name: string;
+  summary: Record<string, unknown> | null;
 };
 
 export type BoreholeWorkbench = {
@@ -142,6 +216,8 @@ export type BoreholeWorkbench = {
   core_images: CoreImage[];
   layout: DisplayLayout | null;
   validation_issues: ValidationIssue[];
+  ai_suggestions: AiSuggestion[];
   source_imports: SourceImport[];
   field_submissions: FieldSubmission[];
+  source_files: SourceFile[];
 };

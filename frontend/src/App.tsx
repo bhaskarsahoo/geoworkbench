@@ -1,8 +1,32 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
-import { getWorkbench, listBoreholes, updateInterval } from "./api/client";
-import type { LithologyInterval } from "./api/types";
+import {
+  approveBoreholeForExport,
+  createSourceFile,
+  createExportJob,
+  acceptAiSuggestion,
+  getExportReadiness,
+  generateAiSuggestions,
+  getWorkbench,
+  getBoreholeAiSummary,
+  getAiProviderStatus,
+  importSourceFileAsBorehole,
+  listBoreholes,
+  listExportJobs,
+  listImportProfiles,
+  processSourceFile,
+  runValidation,
+  uploadSourceFile,
+  resetDisplayLayout,
+  updateDisplayLayout,
+  updateAiSuggestionStatus,
+  updateInterval,
+} from "./api/client";
+import type { DisplayLayout, LithologyInterval } from "./api/types";
+import { AiWorkflowPanel } from "./workbench/ai/AiWorkflowPanel";
+import { ExportPanel } from "./workbench/exports/ExportPanel";
+import { DisplaySettingsPanel } from "./workbench/display/DisplaySettingsPanel";
 import { LogWidget } from "./workbench/widgets/LogWidget";
 import { useWorkbenchStore } from "./workbench/display/workbenchStore";
 
@@ -14,10 +38,27 @@ export function App() {
   const { selectedRemarkGroup, setSelectedRemarkGroup } = useWorkbenchStore();
 
   const boreholes = useQuery({ queryKey: ["boreholes"], queryFn: listBoreholes });
+  const importProfiles = useQuery({ queryKey: ["importProfiles"], queryFn: listImportProfiles });
   const activeId = boreholeId ?? boreholes.data?.[0]?.id;
   const workbench = useQuery({
     queryKey: ["workbench", activeId],
     queryFn: () => getWorkbench(activeId as number),
+    enabled: Boolean(activeId),
+  });
+  const aiSummary = useQuery({
+    queryKey: ["aiSummary", activeId],
+    queryFn: () => getBoreholeAiSummary(activeId as number),
+    enabled: Boolean(activeId),
+  });
+  const aiProvider = useQuery({ queryKey: ["aiProvider"], queryFn: getAiProviderStatus });
+  const exportReadiness = useQuery({
+    queryKey: ["exportReadiness", activeId],
+    queryFn: () => getExportReadiness(activeId as number),
+    enabled: Boolean(activeId),
+  });
+  const exportJobs = useQuery({
+    queryKey: ["exportJobs", activeId],
+    queryFn: () => listExportJobs(activeId as number),
     enabled: Boolean(activeId),
   });
 
@@ -29,11 +70,94 @@ export function App() {
       queryClient.invalidateQueries({ queryKey: ["workbench", activeId] });
     },
   });
+  const validateCurrent = useMutation({
+    mutationFn: () => runValidation(activeId as number),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workbench", activeId] }),
+  });
+  const generateSuggestions = useMutation({
+    mutationFn: () => generateAiSuggestions(activeId as number),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workbench", activeId] });
+      queryClient.invalidateQueries({ queryKey: ["aiSummary", activeId] });
+    },
+  });
+  const acceptSuggestion = useMutation({
+    mutationFn: (suggestionId: number) => acceptAiSuggestion(suggestionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workbench", activeId] });
+      queryClient.invalidateQueries({ queryKey: ["aiSummary", activeId] });
+    },
+  });
+  const rejectSuggestion = useMutation({
+    mutationFn: (suggestionId: number) => updateAiSuggestionStatus(suggestionId, "rejected"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workbench", activeId] }),
+  });
+  const createExport = useMutation({
+    mutationFn: (exportType: string) => createExportJob(activeId as number, exportType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exportReadiness", activeId] });
+      queryClient.invalidateQueries({ queryKey: ["exportJobs", activeId] });
+    },
+  });
+  const approveExport = useMutation({
+    mutationFn: () => approveBoreholeForExport(activeId as number),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boreholes"] });
+      queryClient.invalidateQueries({ queryKey: ["workbench", activeId] });
+      queryClient.invalidateQueries({ queryKey: ["exportReadiness", activeId] });
+    },
+  });
+  const saveDisplayLayout = useMutation({
+    mutationFn: (layout: DisplayLayout) =>
+      updateDisplayLayout(layout.id, {
+        name: layout.name,
+        mode: layout.mode,
+        settings: layout.settings,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workbench", activeId] }),
+  });
+  const resetCurrentLayout = useMutation({
+    mutationFn: () => resetDisplayLayout(activeId as number),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workbench", activeId] }),
+  });
+  const registerSourceFile = useMutation({
+    mutationFn: (payload: { file_type: string; original_name: string }) =>
+      createSourceFile({
+        borehole_id: activeId ?? null,
+        file_type: payload.file_type,
+        original_name: payload.original_name,
+        storage_path: `registered://${payload.original_name}`,
+        file_metadata: { registration_mode: "simulated" },
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workbench", activeId] }),
+  });
+  const uploadFile = useMutation({
+    mutationFn: (payload: { file_type: string; file: File }) =>
+      uploadSourceFile({
+        borehole_id: activeId ?? null,
+        file_type: payload.file_type,
+        file: payload.file,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workbench", activeId] }),
+  });
+  const processFile = useMutation({
+    mutationFn: (sourceFileId: number) => processSourceFile(sourceFileId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workbench", activeId] }),
+  });
+  const importBoreholeFile = useMutation({
+    mutationFn: (sourceFileId: number) => importSourceFileAsBorehole(sourceFileId),
+    onSuccess: (result) => {
+      setBoreholeId(result.borehole_id);
+      queryClient.invalidateQueries({ queryKey: ["boreholes"] });
+      queryClient.invalidateQueries({ queryKey: ["workbench"] });
+    },
+  });
 
   const intervalsByCode = useMemo(() => {
     const counts = new Map<string, number>();
     for (const interval of workbench.data?.lithology_intervals ?? []) {
-      counts.set(interval.lithology_code, (counts.get(interval.lithology_code) ?? 0) + 1);
+      const code = interval.lithology_code ?? "UNKNOWN";
+      counts.set(code, (counts.get(code) ?? 0) + 1);
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
   }, [workbench.data]);
@@ -115,11 +239,20 @@ export function App() {
           </div>
 
           <h2>Track Settings</h2>
-          <div className="settings-note">
-            {mode === "edit"
-              ? "Display edit mode will add drag/drop widgets, track visibility, curve scaling, and saved layout JSON."
-              : "Runtime mode is for correction, AI review, image inspection, and export readiness."}
-          </div>
+          {mode === "edit" ? (
+            <DisplaySettingsPanel
+              layout={workbench.data?.layout ?? null}
+              availableCurves={workbench.data?.curves ?? []}
+              saving={saveDisplayLayout.isPending}
+              resetting={resetCurrentLayout.isPending}
+              onSave={(layout) => saveDisplayLayout.mutate(layout)}
+              onReset={() => resetCurrentLayout.mutate()}
+            />
+          ) : (
+            <div className="settings-note">
+              Runtime mode is for correction, AI review, image inspection, and export readiness.
+            </div>
+          )}
 
           <h2>Lithology Counts</h2>
           <ul className="compact-list">
@@ -132,6 +265,14 @@ export function App() {
           </ul>
 
           <h2>Validation</h2>
+          <button
+            type="button"
+            className="full-width-action"
+            disabled={!activeId || validateCurrent.isPending}
+            onClick={() => validateCurrent.mutate()}
+          >
+            {validateCurrent.isPending ? "Running validation..." : "Run validation"}
+          </button>
           <div className="validation-summary">
             <span>
               {workbench.data?.validation_issues.filter((issue) => issue.severity === "error").length ??
@@ -167,8 +308,84 @@ export function App() {
             ))}
           </div>
 
+          <h2>AI Workflow</h2>
+          <AiWorkflowPanel
+            summary={aiSummary.data}
+            provider={aiProvider.data}
+            suggestions={workbench.data?.ai_suggestions ?? []}
+            generating={generateSuggestions.isPending}
+            acting={acceptSuggestion.isPending || rejectSuggestion.isPending}
+            onGenerate={() => generateSuggestions.mutate()}
+            onAccept={(suggestionId) => acceptSuggestion.mutate(suggestionId)}
+            onReject={(suggestionId) => rejectSuggestion.mutate(suggestionId)}
+          />
+
+          <h2>Export</h2>
+          <ExportPanel
+            readiness={exportReadiness.data}
+            jobs={exportJobs.data}
+            creating={createExport.isPending}
+            approving={approveExport.isPending}
+            onCreate={(exportType) => createExport.mutate(exportType)}
+            onApprove={() => approveExport.mutate()}
+          />
+
           <h2>Data Arrival</h2>
+          <form
+            className="source-file-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = new FormData(event.currentTarget);
+              const fileType = String(form.get("file_type") || "excel");
+              const file = form.get("file");
+              if (file instanceof File && file.name) {
+                uploadFile.mutate({ file_type: fileType, file });
+                event.currentTarget.reset();
+                return;
+              }
+              const fileName = String(form.get("original_name") || "").trim();
+              if (fileName) {
+                registerSourceFile.mutate({ file_type: fileType, original_name: fileName });
+              }
+              event.currentTarget.reset();
+            }}
+          >
+            <select name="file_type" defaultValue="excel">
+              <option value="excel">Excel</option>
+              <option value="las">LAS</option>
+              <option value="images">Images</option>
+              <option value="mobile_form">Mobile form</option>
+            </select>
+            <input name="file" type="file" />
+            <input name="original_name" placeholder="or register filename" />
+            <button type="submit" disabled={registerSourceFile.isPending || uploadFile.isPending}>
+              {uploadFile.isPending ? "Uploading..." : "Add"}
+            </button>
+          </form>
           <div className="arrival-list">
+            {workbench.data?.source_files.map((item) => (
+              <div key={`source-file:${item.id}`} className="arrival-item">
+                <strong>{item.file_type} file</strong>
+                <span>{item.status}</span>
+                <small>{item.original_name}</small>
+                <button
+                  type="button"
+                  disabled={processFile.isPending || item.status === "parsed"}
+                  onClick={() => processFile.mutate(item.id)}
+                >
+                  {item.status === "parsed" ? "Parsed" : "Process"}
+                </button>
+                {item.file_type === "excel" && (
+                  <button
+                    type="button"
+                    disabled={importBoreholeFile.isPending}
+                    onClick={() => importBoreholeFile.mutate(item.id)}
+                  >
+                    Import borehole
+                  </button>
+                )}
+              </div>
+            ))}
             {workbench.data?.source_imports.map((item) => (
               <div key={`import:${item.id}`} className="arrival-item">
                 <strong>{item.import_type}</strong>
@@ -181,6 +398,17 @@ export function App() {
                 <strong>{item.submission_type}</strong>
                 <span>{item.status}</span>
                 <small>{item.submitted_by ?? "field user"}</small>
+              </div>
+            ))}
+          </div>
+
+          <h2>Import Profiles</h2>
+          <div className="arrival-list">
+            {importProfiles.data?.map((profile) => (
+              <div key={profile.id} className="arrival-item">
+                <strong>{profile.name}</strong>
+                <span>{profile.profile_type}</span>
+                <small>{profile.description}</small>
               </div>
             ))}
           </div>
@@ -291,7 +519,7 @@ export function App() {
               >
                 <label>
                   Lithology code
-                  <input name="lithology_code" defaultValue={selectedInterval.lithology_code} />
+                  <input name="lithology_code" defaultValue={selectedInterval.lithology_code ?? ""} />
                 </label>
                 <label>
                   Lithology label

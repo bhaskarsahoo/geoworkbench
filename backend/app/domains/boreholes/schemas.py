@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict
+from app.domains.imports.schemas import SourceFileOut
 
 
 class BoreholeListItem(BaseModel):
@@ -11,6 +12,13 @@ class BoreholeListItem(BaseModel):
     project_code: str
 
 
+class BoreholeStatusOut(BaseModel):
+    id: int
+    code: str
+    workflow_status: str
+    message: str
+
+
 class LithologyIntervalOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -18,7 +26,7 @@ class LithologyIntervalOut(BaseModel):
     source_row: int | None
     from_depth: float
     to_depth: float
-    lithology_code: str
+    lithology_code: str | None
     lithology_label: str
     display_color: str | None
     logged_color: str | None
@@ -91,6 +99,12 @@ class DisplayLayoutOut(BaseModel):
     settings: dict
 
 
+class DisplayLayoutPatch(BaseModel):
+    name: str | None = None
+    mode: str | None = None
+    settings: dict | None = None
+
+
 class ValidationIssueOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -104,6 +118,26 @@ class ValidationIssueOut(BaseModel):
     entity_id: str | None
     status: str
     issue_metadata: dict | None
+
+
+class AiSuggestionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    validation_issue_id: int | None
+    suggestion_type: str
+    title: str
+    rationale: str
+    recommended_action: str
+    confidence: float | None
+    status: str
+    provider: str
+    from_depth: float | None
+    to_depth: float | None
+    entity_type: str | None
+    entity_id: str | None
+    patch: dict | None
+    evidence: dict | None
 
 
 class SourceImportOut(BaseModel):
@@ -142,5 +176,7 @@ class BoreholeWorkbenchOut(BaseModel):
     core_images: list[CoreImageOut]
     layout: DisplayLayoutOut | None
     validation_issues: list[ValidationIssueOut]
+    ai_suggestions: list[AiSuggestionOut]
     source_imports: list[SourceImportOut]
     field_submissions: list[FieldSubmissionOut]
+    source_files: list[SourceFileOut]

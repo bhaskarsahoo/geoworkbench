@@ -5,7 +5,10 @@ from app.db.session import get_db
 from app.domains.boreholes import service
 from app.domains.boreholes.schemas import (
     BoreholeListItem,
+    BoreholeStatusOut,
     BoreholeWorkbenchOut,
+    DisplayLayoutOut,
+    DisplayLayoutPatch,
     LithologyIntervalOut,
     LithologyIntervalPatch,
 )
@@ -35,3 +38,32 @@ def patch_interval(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+
+@router.patch("/display-layouts/{layout_id}", response_model=DisplayLayoutOut)
+def patch_display_layout(
+    layout_id: int, patch: DisplayLayoutPatch, db: Session = Depends(get_db)
+) -> DisplayLayoutOut:
+    try:
+        return service.update_display_layout(db, layout_id, patch)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/{borehole_id}/display-layout/reset", response_model=DisplayLayoutOut)
+def reset_display_layout(
+    borehole_id: int, db: Session = Depends(get_db)
+) -> DisplayLayoutOut:
+    try:
+        return service.reset_borehole_display_layout(db, borehole_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/{borehole_id}/approve-export", response_model=BoreholeStatusOut)
+def approve_borehole_for_export(
+    borehole_id: int, db: Session = Depends(get_db)
+) -> BoreholeStatusOut:
+    try:
+        return service.approve_borehole_for_export(db, borehole_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

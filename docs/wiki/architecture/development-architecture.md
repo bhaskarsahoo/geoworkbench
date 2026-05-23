@@ -44,6 +44,22 @@ Rules:
 - Seed scripts may insert demo data, but they should not define schema.
 - Production/server deployment must run migrations before starting the API.
 
+## Local Upload Storage
+
+Source file uploads are stored under:
+
+```text
+runtime-data/uploads/
+```
+
+This folder is ignored by git. In production, configure:
+
+```text
+GEOWORKBENCH_UPLOAD_ROOT=D:/GeoWorkbench/data/uploads
+```
+
+or an equivalent durable storage path. Later deployments may replace local storage with object storage while keeping the `source_files` database contract.
+
 ## AI Integration Direction
 
 Phase 1 should use controlled task-based AI, not autonomous agents.
@@ -56,3 +72,13 @@ Provider abstraction should later support:
 - Anthropic-compatible APIs
 
 The assistant should read data, summarize, explain, and create suggestions. It should never apply final geological corrections without geologist approval.
+
+Current local AI configuration uses an OpenAI-compatible endpoint:
+
+```text
+GEOWORKBENCH_AI_PROVIDER=local_openai
+GEOWORKBENCH_AI_BASE_URL=http://192.168.1.2:1234/v1
+GEOWORKBENCH_AI_MODEL=google/gemma-4-e4b
+```
+
+The deterministic rule engine remains the source of validation findings and suggested patches. The local model is used only to turn those rule findings into clearer, actionable review notes for the geologist.

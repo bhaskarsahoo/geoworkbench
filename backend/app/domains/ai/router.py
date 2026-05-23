@@ -1,0 +1,47 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.domains.ai import service
+from app.domains.ai.schemas import AiSuggestionOut, AiSuggestionStatusPatch, BoreholeSummaryOut
+
+router = APIRouter()
+
+
+@router.post("/boreholes/{borehole_id}/suggestions/generate", response_model=list[AiSuggestionOut])
+def generate_suggestions(borehole_id: int, db: Session = Depends(get_db)) -> list[AiSuggestionOut]:
+    try:
+        return service.generate_suggestions(db, borehole_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.patch("/suggestions/{suggestion_id}", response_model=AiSuggestionOut)
+def update_suggestion_status(
+    suggestion_id: int, payload: AiSuggestionStatusPatch, db: Session = Depends(get_db)
+) -> AiSuggestionOut:
+    try:
+        return service.update_suggestion_status(db, suggestion_id, payload.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/suggestions/{suggestion_id}/accept", response_model=AiSuggestionOut)
+def accept_suggestion(suggestion_id: int, db: Session = Depends(get_db)) -> AiSuggestionOut:
+    try:
+        return service.accept_suggestion(db, suggestion_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/boreholes/{borehole_id}/summary", response_model=BoreholeSummaryOut)
+def summarize_borehole(borehole_id: int, db: Session = Depends(get_db)) -> BoreholeSummaryOut:
+    try:
+        return service.summarize_borehole(db, borehole_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/provider-status")
+def provider_status() -> dict:
+    return service.provider_status()

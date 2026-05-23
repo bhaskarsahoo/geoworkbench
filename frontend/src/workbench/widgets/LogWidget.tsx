@@ -5,6 +5,7 @@ import { createDepthScale } from "../core/depthScale";
 import { handleTrackPointerEvent } from "../core/interactions";
 import type { TrackPointerEvent } from "../core/trackObject";
 import { useWorkbenchStore } from "../display/workbenchStore";
+import { AiSuggestionsTrack } from "../tracks/aiSuggestions/AiSuggestionsTrack";
 import { CurveTrack } from "../tracks/curve/CurveTrack";
 import { DepthTrack } from "../tracks/depth/DepthTrack";
 import { LithologyTrack } from "../tracks/lithology/LithologyTrack";
@@ -176,6 +177,18 @@ export function LogWidget({ data }: Props) {
             if (track.type === "remarks") {
               return (
                 <RemarksTrack
+                  key={track.id}
+                  data={data}
+                  track={track}
+                  scale={scale}
+                  widthStyle={widthForTrack(track.width)}
+                  onTrackEvent={onTrackEvent}
+                />
+              );
+            }
+            if (track.type === "aiSuggestions") {
+              return (
+                <AiSuggestionsTrack
                   key={track.id}
                   data={data}
                   track={track}

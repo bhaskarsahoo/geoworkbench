@@ -1,0 +1,71 @@
+{
+  "purpose": "Known-bad fixture for validation and AI-assisted correction demos.",
+  "plantedIssues": [
+    {
+      "issueType": "missing_lithology_code",
+      "intervalId": "ctsj-lith-54",
+      "sourceRow": 54,
+      "description": "Lithology code removed to test required-field validation.",
+      "before": "SST",
+      "after": null
+    },
+    {
+      "issueType": "overlap",
+      "intervalId": "ctsj-lith-97",
+      "sourceRow": 97,
+      "description": "From-depth shifted upward to overlap previous interval.",
+      "before": 161.56,
+      "after": 161.21
+    },
+    {
+      "issueType": "gap",
+      "intervalId": "ctsj-lith-141",
+      "sourceRow": 141,
+      "description": "From-depth shifted downward to create a gap after previous interval.",
+      "before": 184.1,
+      "after": 184.55
+    },
+    {
+      "issueType": "recovery_greater_than_thickness",
+      "intervalId": "ctsj-lith-189",
+      "sourceRow": 189,
+      "description": "Recovery made larger than interval thickness.",
+      "before": 0.11,
+      "after": 0.48
+    },
+    {
+      "issueType": "invalid_rqd_percent",
+      "intervalId": "ctsj-lith-239",
+      "sourceRow": 239,
+      "description": "RQD percent set above 100.",
+      "before": null,
+      "after": 128
+    },
+    {
+      "issueType": "invalid_depth_range",
+      "intervalId": "ctsj-lith-279",
+      "sourceRow": 279,
+      "description": "Thickness made negative so to-depth is less than from-depth.",
+      "before": {
+        "thickness": 1.83,
+        "toDepth": 292.83
+      },
+      "after": {
+        "thickness": -0.2,
+        "toDepth": 290.8
+      }
+    }
+  ],
+  "curveAnomalies": [
+    {
+      "depthFrom": 82,
+      "depthTo": 86,
+      "description": "Coal-like low gamma/density response planted in a sandstone interval."
+    },
+    {
+      "depthFrom": 334,
+      "depthTo": 338,
+      "description": "Shale-like high gamma/density response planted in a coal interval."
+    }
+  ]
+}

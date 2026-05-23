@@ -1,0 +1,48 @@
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.domains.exports import service
+from app.domains.exports.schemas import ExportJobOut, ExportReadinessOut, ExportRequest
+
+router = APIRouter()
+
+
+@router.get("/boreholes/{borehole_id}/readiness", response_model=ExportReadinessOut)
+def get_export_readiness(borehole_id: int, db: Session = Depends(get_db)) -> ExportReadinessOut:
+    try:
+        return service.export_readiness(db, borehole_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/boreholes/{borehole_id}/jobs", response_model=list[ExportJobOut])
+def list_export_jobs(borehole_id: int, db: Session = Depends(get_db)) -> list[ExportJobOut]:
+    return service.list_exports(db, borehole_id)
+
+
+@router.post("/boreholes/{borehole_id}/jobs", response_model=ExportJobOut)
+def create_export_job(
+    borehole_id: int, payload: ExportRequest, db: Session = Depends(get_db)
+) -> ExportJobOut:
+    try:
+        return service.create_export(db, borehole_id, payload.export_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/jobs/{export_job_id}/download")
+def download_export_job(export_job_id: int, db: Session = Depends(get_db)) -> FileResponse:
+    try:
+        path = service.get_export_path(db, export_job_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Export file not found")
+    media_type = "text/csv"
+    if path.suffix.lower() == ".xlsx":
+        media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    elif path.suffix.lower() == ".las":
+        media_type = "text/plain"
+    return FileResponse(path, filename=path.name, media_type=media_type)

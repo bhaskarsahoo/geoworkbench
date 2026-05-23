@@ -80,6 +80,13 @@ def default_borehole_layout() -> dict:
                         "visible": True,
                         "width": 220,
                     },
+                    {
+                        "id": "ai-suggestions",
+                        "type": "aiSuggestions",
+                        "title": "AI",
+                        "visible": True,
+                        "width": 120,
+                    },
                 ],
             }
         },

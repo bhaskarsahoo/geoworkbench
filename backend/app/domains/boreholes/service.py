@@ -1,16 +1,20 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.db.models import Borehole, CoreImage, CorrectionAudit, Curve, LithologyInterval, Project, Site
+from app.db.models import Borehole, CoreImage, CorrectionAudit, Curve, DisplayLayout, LithologyInterval, Project, Site
 from app.domains.boreholes.schemas import (
     BoreholeListItem,
+    BoreholeStatusOut,
     BoreholeWorkbenchOut,
     CoreImageOut,
     CurveOut,
+    DisplayLayoutPatch,
     CurveSampleOut,
     DisplayLayoutOut,
     LithologyIntervalPatch,
 )
+from app.domains.display_layouts.defaults import default_borehole_layout
+from app.services.validation.borehole_validation import replace_validation_issues, validate_borehole
 
 
 def list_boreholes(db: Session) -> list[BoreholeListItem]:
@@ -44,7 +48,9 @@ def get_workbench(db: Session, borehole_id: int) -> BoreholeWorkbenchOut:
             selectinload(Borehole.core_images),
             selectinload(Borehole.display_layouts),
             selectinload(Borehole.validation_issues),
+            selectinload(Borehole.ai_suggestions),
             selectinload(Borehole.source_imports),
+            selectinload(Borehole.source_files),
             selectinload(Borehole.field_submissions),
             selectinload(Borehole.curves).selectinload(Curve.samples),
         )
@@ -110,8 +116,17 @@ def get_workbench(db: Session, borehole_id: int) -> BoreholeWorkbenchOut:
                 item.from_depth if item.from_depth is not None else -1,
             ),
         ),
+        ai_suggestions=sorted(
+            borehole.ai_suggestions,
+            key=lambda item: (
+                {"open": 0, "accepted": 1, "rejected": 2}.get(item.status, 3),
+                item.from_depth if item.from_depth is not None else -1,
+                item.id,
+            ),
+        ),
         source_imports=sorted(borehole.source_imports, key=lambda item: item.id),
         field_submissions=sorted(borehole.field_submissions, key=lambda item: item.id),
+        source_files=sorted(borehole.source_files, key=lambda item: item.id),
     )
 
 
@@ -150,4 +165,88 @@ def find_core_image_for_depth(db: Session, borehole_id: int, depth: float) -> Co
         .where(CoreImage.from_depth <= depth)
         .where(CoreImage.to_depth >= depth)
         .order_by(CoreImage.box_number)
+    )
+
+
+def update_display_layout(
+    db: Session, layout_id: int, patch: DisplayLayoutPatch
+) -> DisplayLayout:
+    layout = db.get(DisplayLayout, layout_id)
+    if layout is None:
+        raise ValueError("Display layout not found")
+
+    updates = patch.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        if value is not None:
+            setattr(layout, field, value)
+    db.add(layout)
+    db.commit()
+    db.refresh(layout)
+    return layout
+
+
+def reset_borehole_display_layout(db: Session, borehole_id: int) -> DisplayLayout:
+    borehole = db.scalar(
+        select(Borehole)
+        .where(Borehole.id == borehole_id)
+        .options(selectinload(Borehole.display_layouts))
+    )
+    if borehole is None:
+        raise ValueError("Borehole not found")
+    layout = borehole.display_layouts[0] if borehole.display_layouts else None
+    if layout is None:
+        layout = DisplayLayout(borehole=borehole, name="Default Borehole Log", mode="runtime", settings={})
+    layout.settings = default_borehole_layout()
+    layout.mode = "runtime"
+    db.add(layout)
+    db.commit()
+    db.refresh(layout)
+    return layout
+
+
+def approve_borehole_for_export(db: Session, borehole_id: int) -> BoreholeStatusOut:
+    borehole = db.scalar(
+        select(Borehole)
+        .where(Borehole.id == borehole_id)
+        .options(
+            selectinload(Borehole.lithology_intervals),
+            selectinload(Borehole.validation_issues),
+            selectinload(Borehole.ai_suggestions),
+        )
+    )
+    if borehole is None:
+        raise ValueError("Borehole not found")
+
+    replace_validation_issues(borehole, validate_borehole(borehole))
+    blocking_errors = [issue for issue in borehole.validation_issues if issue.severity == "error"]
+    if blocking_errors:
+        db.add(borehole)
+        db.commit()
+        return BoreholeStatusOut(
+            id=borehole.id,
+            code=borehole.code,
+            workflow_status=borehole.workflow_status,
+            message=f"Cannot approve: {len(blocking_errors)} validation error(s) remain.",
+        )
+
+    before_status = borehole.workflow_status
+    borehole.workflow_status = "approved_for_export"
+    db.add(
+        CorrectionAudit(
+            borehole_id=borehole.id,
+            interval_id=borehole.lithology_intervals[0].id if borehole.lithology_intervals else "",
+            entity_type="borehole",
+            changed_by="central-geologist",
+            change_reason="Approved borehole for export",
+            before_values={"workflow_status": before_status},
+            after_values={"workflow_status": borehole.workflow_status},
+        )
+    )
+    db.add(borehole)
+    db.commit()
+    return BoreholeStatusOut(
+        id=borehole.id,
+        code=borehole.code,
+        workflow_status=borehole.workflow_status,
+        message="Borehole approved for export.",
     )
