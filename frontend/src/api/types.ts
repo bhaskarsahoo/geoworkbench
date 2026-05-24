@@ -74,12 +74,35 @@ export type DisplayLayout = {
   name: string;
   mode: string;
   settings: {
-    widgets?: {
-      "log-widget"?: {
-        tracks?: DisplayTrack[];
-      };
-    };
+    schemaVersion?: number;
+    mode?: string;
+    regions?: Record<string, string[]>;
+    grid?: DisplayGrid;
+    widgets?: Record<string, DisplayWidget>;
   };
+};
+
+export type DisplayGrid = {
+  columns: number;
+  rowHeight: number;
+  items: DisplayGridItem[];
+};
+
+export type DisplayGridItem = {
+  widgetId: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+export type DisplayWidget = {
+  type: string;
+  title: string;
+  tracks?: DisplayTrack[];
+  metric?: "total_depth" | "interval_count" | "curve_count" | "corebox_count" | string;
+  sourceWidgetId?: string;
+  settings?: Record<string, unknown>;
 };
 
 export type DisplayTrack = {

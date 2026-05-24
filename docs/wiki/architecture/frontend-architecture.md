@@ -25,11 +25,10 @@ The most important UI is the borehole log widget. It is designed like a lightwei
 ```text
 Topbar
   -> borehole selector
-  -> runtime/edit display mode
+  -> display editor launcher
 
 Left panel
   -> metrics
-  -> display settings
   -> validation
   -> AI workflow
   -> export
@@ -42,6 +41,13 @@ Right panel
   -> selected interval metadata
   -> corebox preview/full image
   -> editable geologist correction form
+
+Display editor dialog
+  -> widget collection
+  -> display grid canvas
+  -> selected widget inspector
+  -> right-click widget settings
+  -> log widget track/curve settings
 ```
 
 ## Data Fetching
@@ -131,17 +137,44 @@ It holds:
 
 Server data still lives in TanStack Query. The store is only for UI interaction state.
 
-## Display Settings
+## Display Editor
 
 Display settings are persisted as JSON in `DisplayLayout.settings`.
 
 The current shape is:
 
 ```text
+settings.schemaVersion
+settings.regions
+settings.grid.items[]
+settings.widgets[widgetId]
 settings.widgets["log-widget"].tracks[]
 ```
 
-Each track config has:
+The display editor is launched from the topbar. It uses a draft copy of the saved layout, so editing can support:
+
+- Save display
+- Undo one step
+- Cancel the full edit session and keep the original
+- Reset default
+- Add widget from widget collection
+- Remove widget
+- Clone widget
+- Drag widgets inside a grid canvas by swapping widget positions
+- Right-click a widget to open widget settings
+
+Widget-level concepts:
+
+| Concept | Meaning |
+| --- | --- |
+| Display | Whole saved layout JSON for a borehole. |
+| Widget collection | Available widget types, such as single value, log widget, AI workflow, validation, export, data arrival. |
+| Widget | A display unit with type, title, settings, and optional nested internals. |
+| Grid item | Position and size for a widget: `x`, `y`, `w`, `h`. |
+| Widget settings | Dialog opened from widget right-click or inspector. |
+| Log widget settings | Nested settings for tracks and curves. |
+
+Log widget track config has:
 
 - `id`
 - `type`
@@ -151,7 +184,7 @@ Each track config has:
 - optional curve configs
 - optional quantitative field config
 
-`DisplaySettingsPanel.tsx` lets the user show/hide, add/remove, resize, and reorder tracks. `LogWidget.tsx` uses the saved layout to decide which track components to render.
+`DisplayEditorDialog.tsx` owns the edit session. `displayEditorModel.ts` owns catalog/default/normalization helpers. `LogWidget.tsx` uses the saved `log-widget` settings to decide which track components to render.
 
 ## Adding A New Track
 
@@ -161,8 +194,16 @@ Each track config has:
 4. Use `DepthScale`; do not write separate depth math.
 5. Add a `hitTest`.
 6. Add the renderer switch in `LogWidget.tsx`.
-7. Add the track to `DisplaySettingsPanel.tsx` catalog if users should be able to re-add it.
+7. Add the track to `displayEditorModel.ts` catalog if users should be able to re-add it.
 8. Add behavior to `interactions.ts` only if click/hover/context-menu should do something new.
+
+## Adding A New Widget
+
+1. Add a widget catalog entry in `displayEditorModel.ts`.
+2. Add any widget-specific persisted settings to `DisplayWidget` in `api/types.ts`.
+3. Add widget settings controls in `DisplayEditorDialog.tsx`.
+4. Add runtime rendering when the main display becomes fully grid-driven.
+5. Keep widget internals nested under `settings.widgets[widgetId]`.
 
 ## Refinement Hotspots
 
@@ -171,8 +212,7 @@ Each track config has:
 | Improve visual display | `LogWidget.tsx`, track components, `styles.css` |
 | Change click/hover behavior | `core/interactions.ts`, `TrackFrame.tsx`, track `hitTest` |
 | Improve curve rendering | `core/curveMath.ts`, `tracks/curve/CurveTrack.tsx` |
-| Improve display settings | `display/DisplaySettingsPanel.tsx`, backend layout defaults |
+| Improve display settings | `display/DisplayEditorDialog.tsx`, `display/displayEditorModel.ts`, backend layout defaults |
 | Add side-panel metadata | `App.tsx` right panel and backend workbench schema |
 | Add AI workflow UI | `workbench/ai/AiWorkflowPanel.tsx`, `tracks/aiSuggestions` |
 | Add export controls | `workbench/exports/ExportPanel.tsx` |
-

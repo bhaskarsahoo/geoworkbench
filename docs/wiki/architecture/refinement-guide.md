@@ -26,7 +26,7 @@ This is the practical map for future changes. When something needs refinement, s
 | Add API call | `frontend/src/api/client.ts`, `frontend/src/api/types.ts` |
 | Change interval edit form | `App.tsx`, backend borehole schemas/service |
 | Add more metadata in right panel | `App.tsx`, backend workbench response |
-| Change display edit controls | `workbench/display/DisplaySettingsPanel.tsx` |
+| Change display edit controls | `workbench/display/DisplayEditorDialog.tsx`, `workbench/display/displayEditorModel.ts` |
 | Change shared workbench state | `workbench/display/workbenchStore.ts` |
 | Change zoom/depth mapping | `workbench/core/depthScale.ts`, `LogWidget.tsx` |
 | Change click/hover behavior | `workbench/core/interactions.ts`, `TrackFrame.tsx` |
@@ -60,6 +60,18 @@ frontend/src/app/
 ```
 
 This will make UI refinement less risky.
+
+### 1A. Make Runtime Fully Grid-Driven
+
+The display editor now saves widget grid positions and widget internals. Runtime still uses the established three-panel workbench composition for the demo.
+
+Suggested sequence:
+
+1. Create `DisplayRuntime.tsx`.
+2. Render widgets from `layout.settings.grid.items`.
+3. Add runtime renderers for single value, validation, AI, export, data arrival, and log widget.
+4. Keep the current right metadata panel as a dedicated widget or fixed side panel depending on geologist feedback.
+5. Keep `DisplayEditorDialog.tsx` as the editing surface and `DisplayRuntime.tsx` as the rendering surface.
 
 ### 2. Add Auth To Frontend
 
@@ -149,4 +161,3 @@ For bigger boreholes or dense curves:
 - Keep validation deterministic and explainable.
 - Keep AI suggestions auditable and reversible.
 - Keep import/export template assumptions documented until customer formats are confirmed.
-

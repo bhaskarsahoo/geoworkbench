@@ -26,14 +26,15 @@ import {
 import type { DisplayLayout, LithologyInterval } from "./api/types";
 import { AiWorkflowPanel } from "./workbench/ai/AiWorkflowPanel";
 import { ExportPanel } from "./workbench/exports/ExportPanel";
-import { DisplaySettingsPanel } from "./workbench/display/DisplaySettingsPanel";
+import { DisplayEditorDialog } from "./workbench/display/DisplayEditorDialog";
 import { LogWidget } from "./workbench/widgets/LogWidget";
 import { useWorkbenchStore } from "./workbench/display/workbenchStore";
 
 export function App() {
   const queryClient = useQueryClient();
   const [boreholeId, setBoreholeId] = useState<number | null>(null);
-  const { selectedInterval, setSelectedInterval, selectedImage, setSelectedImage, mode, setMode } =
+  const [displayEditorOpen, setDisplayEditorOpen] = useState(false);
+  const { selectedInterval, setSelectedInterval, selectedImage, setSelectedImage } =
     useWorkbenchStore();
   const { selectedRemarkGroup, setSelectedRemarkGroup } = useWorkbenchStore();
 
@@ -196,15 +197,8 @@ export function App() {
             ))}
           </select>
           <button
-            className={mode === "runtime" ? "active" : ""}
-            onClick={() => setMode("runtime")}
-            type="button"
-          >
-            Runtime
-          </button>
-          <button
-            className={mode === "edit" ? "active" : ""}
-            onClick={() => setMode("edit")}
+            className={displayEditorOpen ? "active" : ""}
+            onClick={() => setDisplayEditorOpen(true)}
             type="button"
           >
             Edit display
@@ -237,22 +231,6 @@ export function App() {
               <span>Coreboxes</span>
             </div>
           </div>
-
-          <h2>Track Settings</h2>
-          {mode === "edit" ? (
-            <DisplaySettingsPanel
-              layout={workbench.data?.layout ?? null}
-              availableCurves={workbench.data?.curves ?? []}
-              saving={saveDisplayLayout.isPending}
-              resetting={resetCurrentLayout.isPending}
-              onSave={(layout) => saveDisplayLayout.mutate(layout)}
-              onReset={() => resetCurrentLayout.mutate()}
-            />
-          ) : (
-            <div className="settings-note">
-              Runtime mode is for correction, AI review, image inspection, and export readiness.
-            </div>
-          )}
 
           <h2>Lithology Counts</h2>
           <ul className="compact-list">
@@ -576,6 +554,20 @@ export function App() {
           </div>
         </div>
       )}
+      <DisplayEditorDialog
+        open={displayEditorOpen}
+        layout={workbench.data?.layout ?? null}
+        availableCurves={workbench.data?.curves ?? []}
+        saving={saveDisplayLayout.isPending}
+        resetting={resetCurrentLayout.isPending}
+        onSave={(layout) =>
+          saveDisplayLayout.mutate(layout, {
+            onSuccess: () => setDisplayEditorOpen(false),
+          })
+        }
+        onReset={() => resetCurrentLayout.mutate()}
+        onClose={() => setDisplayEditorOpen(false)}
+      />
     </main>
   );
 }
