@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type CSSProperties, useState } from "react";
 
 import type { BoreholeWorkbench } from "../../api/types";
 import { createDepthScale } from "../core/depthScale";
@@ -19,23 +19,38 @@ type Props = {
 
 export function LogWidget({ data }: Props) {
   const store = useWorkbenchStore();
-  const { selectedDepth, contextMenu, setContextMenu, depthWindow, setDepthWindow } = store;
+  const {
+    selectedDepth,
+    contextMenu,
+    setContextMenu,
+    depthWindow,
+    setDepthWindow,
+    tooltipsEnabled,
+    setTooltipsEnabled,
+  } = store;
   const [rubberBand, setRubberBand] = useState<{
     startY: number;
     currentY: number;
     startDepth: number;
     currentDepth: number;
   } | null>(null);
+  const tracks = data.layout?.settings.widgets?.["log-widget"]?.tracks ?? [];
+  const visibleTracks = tracks.filter((track) => track.visible && track.type !== "images");
+  const maxVisibleCurves = Math.max(
+    0,
+    ...visibleTracks
+      .filter((track) => track.type === "curve")
+      .map((track) => track.curves?.filter((curve) => curve.visible).length ?? 0),
+  );
+  const headerHeight = Math.max(88, 46 + maxVisibleCurves * 14);
   const height = Math.max(720, data.total_depth * 1.35);
   const scale = createDepthScale(
     data.total_depth,
     height,
-    42,
+    headerHeight,
     depthWindow?.fromDepth ?? 0,
     depthWindow?.toDepth ?? data.total_depth,
   );
-  const tracks = data.layout?.settings.widgets?.["log-widget"]?.tracks ?? [];
-  const visibleTracks = tracks.filter((track) => track.visible && track.type !== "images");
   const totalConfiguredWidth = visibleTracks.reduce((sum, track) => sum + track.width, 0);
   const widthForTrack = (trackWidth: number) =>
     totalConfiguredWidth > 0 ? `${(trackWidth / totalConfiguredWidth) * 100}%` : `${100 / visibleTracks.length}%`;
@@ -72,7 +87,12 @@ export function LogWidget({ data }: Props) {
       <div className="track-scroll">
         <div
           className="track-row"
-          style={{ height }}
+          style={
+            {
+              height,
+              "--track-header-height": `${headerHeight}px`,
+            } as CSSProperties
+          }
           onMouseDown={(event) => {
             if (event.button !== 0) return;
             if ((event.target as HTMLElement).closest(".track-title")) return;
@@ -106,6 +126,7 @@ export function LogWidget({ data }: Props) {
           }}
           onMouseLeave={() => setRubberBand(null)}
           onWheel={(event) => {
+            if (!event.altKey && !event.ctrlKey) return;
             event.preventDefault();
             const bounds = event.currentTarget.getBoundingClientRect();
             const y = event.clientY - bounds.top - scale.topOffset;
@@ -237,6 +258,15 @@ export function LogWidget({ data }: Props) {
               </button>
               <button type="button" onClick={() => setDepthWindow(null)}>
                 Full depth
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTooltipsEnabled(!tooltipsEnabled);
+                  setContextMenu(null);
+                }}
+              >
+                {tooltipsEnabled ? "Disable tooltips" : "Enable tooltips"}
               </button>
               <button type="button" onClick={() => setContextMenu(null)}>
                 Close

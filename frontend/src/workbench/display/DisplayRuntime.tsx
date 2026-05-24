@@ -300,6 +300,7 @@ function DataArrivalWidget({ title, ...props }: Props & { title: string }) {
 
 function IntervalDetailsWidget({ title, ...props }: Props & { title: string }) {
   const interval = props.selectedInterval;
+  const boreholeMetadata = buildBoreholeMetadata(props.data);
   return (
     <RuntimeWidgetFrame title={title}>
       {!interval && <div className="empty">Select an interval or curve point.</div>}
@@ -345,6 +346,14 @@ function IntervalDetailsWidget({ title, ...props }: Props & { title: string }) {
               </span>
             </button>
           )}
+          <details className="metadata-collapsible">
+            <summary>Borehole metadata</summary>
+            <div className="field-grid metadata-grid">
+              {boreholeMetadata.map((item) => (
+                <MetadataField key={item.label} label={item.label} value={item.value} />
+              ))}
+            </div>
+          </details>
           <form
             className="edit-form"
             onSubmit={(event) => {
@@ -382,6 +391,34 @@ function IntervalDetailsWidget({ title, ...props }: Props & { title: string }) {
       )}
     </RuntimeWidgetFrame>
   );
+}
+
+function buildBoreholeMetadata(data: BoreholeWorkbench) {
+  const excelImport = data.source_imports.find((item) => item.import_type === "excel");
+  const metadata = (excelImport?.summary?.metadata ?? {}) as Record<string, unknown>;
+  const sourceDepthText = Array.isArray(metadata.source_depth_text)
+    ? metadata.source_depth_text
+        .map((item) =>
+          typeof item === "object" && item !== null && "text" in item
+            ? String((item as { text?: unknown }).text ?? "")
+            : "",
+        )
+        .filter(Boolean)
+        .join(" | ")
+    : "";
+
+  return [
+    { label: "Borehole", value: data.code || "-" },
+    { label: "State", value: data.state || "-" },
+    { label: "Block", value: String(metadata.block ?? data.source_sheet ?? "-") },
+    { label: "Latitude", value: String(metadata.latitude ?? "-") },
+    { label: "Departure", value: String(metadata.departure ?? "-") },
+    { label: "Reduced level", value: String(metadata.reduced_level ?? metadata.rl ?? "-") },
+    { label: "Water level", value: String(metadata.water_level ?? "-") },
+    { label: "Total depth", value: `${data.total_depth} m` },
+    { label: "Status/depth text", value: sourceDepthText || data.closure_note || "-" },
+    { label: "Source workbook", value: data.source_workbook || "-" },
+  ];
 }
 
 function MetadataField({ label, value, full }: { label: string; value: string; full?: boolean }) {

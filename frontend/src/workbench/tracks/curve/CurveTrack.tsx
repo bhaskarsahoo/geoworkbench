@@ -16,7 +16,7 @@ type Props = {
 };
 
 export function CurveTrack({ data, track, scale, widthStyle, onTrackEvent }: Props) {
-  const { hoveredObject } = useWorkbenchStore();
+  const { hoveredObject, tooltipsEnabled } = useWorkbenchStore();
   const configuredCurves = track.curves?.filter((curve) => curve.visible) ?? [];
   const curves = useMemo(
     () =>
@@ -44,13 +44,17 @@ export function CurveTrack({ data, track, scale, widthStyle, onTrackEvent }: Pro
       className="curve-track"
       onTrackEvent={onTrackEvent}
       headerDetail={
-        <div className="curve-legend">
+        <div className="curve-header-stack">
           {configuredCurves.map((curve) => (
-            <span key={curve.curveKey}>
-              <i style={{ background: curve.color }} />
-              {curve.label} {curve.scale.min}-{curve.scale.max}
-              {curve.scale.mode === "manual" ? " manual" : " auto"}
-            </span>
+            <div key={curve.curveKey} className="curve-header-row">
+              <span className="curve-header-min">{formatScaleValue(curve.scale.min)}</span>
+              <span className="curve-header-line">
+                <i style={{ background: curve.color }} />
+                <b style={{ color: curve.color }}>{curve.label}</b>
+                <small>{curve.unit}</small>
+              </span>
+              <span className="curve-header-max">{formatScaleValue(curve.scale.max)}</span>
+            </div>
           ))}
         </div>
       }
@@ -112,7 +116,7 @@ export function CurveTrack({ data, track, scale, widthStyle, onTrackEvent }: Pro
           />
         ))}
       </svg>
-      {hit && (
+      {tooltipsEnabled && hit && (
         <div
           className="curve-tooltip multi"
           style={{ left: `${hit.screenXPercent}%`, top: `${hit.screenYPercent}%` }}
@@ -131,4 +135,10 @@ export function CurveTrack({ data, track, scale, widthStyle, onTrackEvent }: Pro
       )}
     </TrackFrame>
   );
+}
+
+function formatScaleValue(value: number) {
+  if (Math.abs(value) >= 100) return value.toFixed(0);
+  if (Math.abs(value) >= 10) return value.toFixed(1).replace(/\.0$/, "");
+  return value.toFixed(2).replace(/\.?0+$/, "");
 }

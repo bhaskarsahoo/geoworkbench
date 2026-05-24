@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.db.models import SourceImport, ImportProfile, SourceFile
 from app.domains.imports.schemas import SourceFileCreate
 from app.services.excel_import import import_excel_workbook, profile_excel_workbook
+from app.services.geophysical_pdf_import import profile_pinnacle_composite_pdf
 
 
 def ensure_default_profiles(db: Session) -> None:
@@ -74,6 +75,23 @@ def ensure_default_profiles(db: Session) -> None:
                 "depth": "DEPT",
                 "curves": ["GR", "RHOB", "RES", "CALI", "DT"],
                 "status": "draft_profile",
+            },
+        ),
+        ImportProfile(
+            name="Pinnacle Composite PDF",
+            profile_type="geophysical_pdf",
+            description=(
+                "Digitizes plotted vector curves from a Pinnacle composite PDF when raw "
+                "LAS/CSV is unavailable."
+            ),
+            mapping={
+                "template_key": "pinnacle_composite_pdf_v1",
+                "depth_axis": "embedded_depth_labels",
+                "tracks": {
+                    "left": ["CALP", "NGAM", "SP", "INCL"],
+                    "right": ["HRD", "RES", "DENS", "SPR"],
+                },
+                "status": "review_profile",
             },
         ),
         ImportProfile(
@@ -218,6 +236,8 @@ def process_source_file(db: Session, source_file_id: int) -> tuple[SourceFile, S
             summary = preview_delimited_file(absolute_path)
         elif suffix in {".xlsx", ".xlsm"}:
             summary = profile_excel_workbook(absolute_path)
+        elif suffix == ".pdf" and source_file.file_type in {"geophysical_pdf", "pinnacle_pdf"}:
+            summary = profile_pinnacle_composite_pdf(absolute_path)
         else:
             summary = {
                 "parser": "metadata_only",

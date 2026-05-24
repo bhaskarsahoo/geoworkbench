@@ -48,8 +48,13 @@ def _suggestion_for_issue(borehole: Borehole, issue: ValidationIssue) -> dict | 
     action = "Review the source row and adjust the interval before approving export."
     rationale = issue.message
     confidence = 0.72
+    from_depth = issue.from_depth
+    to_depth = issue.to_depth
 
-    if issue.severity == "info":
+    if issue.severity == "info" and issue.code not in {
+        "coal_interval_without_seam",
+        "curve_depth_range_mismatch",
+    }:
         return None
 
     if issue.code == "missing_lithology_code":
@@ -113,6 +118,18 @@ def _suggestion_for_issue(borehole: Borehole, issue: ValidationIssue) -> dict | 
         action = "Review whether this coal/carbonaceous interval should inherit a seam name or remain local/non-seam coal."
         confidence = 0.52
 
+    elif issue.code == "curve_depth_range_mismatch":
+        entity_id = None
+        entity_type = "curve"
+        title = "Geophysical curve coverage needs review"
+        action = (
+            "Treat the imported geophysical curve as partial evidence. Confirm whether the missing "
+            "depth coverage is expected for this source before using it for correction."
+        )
+        confidence = 0.64
+        from_depth = None
+        to_depth = None
+
     return {
         "validation_issue_id": issue.id,
         "suggestion_type": issue.code,
@@ -120,8 +137,8 @@ def _suggestion_for_issue(borehole: Borehole, issue: ValidationIssue) -> dict | 
         "rationale": rationale,
         "recommended_action": action,
         "confidence": confidence,
-        "from_depth": issue.from_depth,
-        "to_depth": issue.to_depth,
+        "from_depth": from_depth,
+        "to_depth": to_depth,
         "entity_type": entity_type,
         "entity_id": entity_id,
         "patch": patch,
@@ -136,12 +153,12 @@ def _suggestion_for_issue(borehole: Borehole, issue: ValidationIssue) -> dict | 
 
 def generate_suggestions(db: Session, borehole_id: int) -> list[AiSuggestion]:
     borehole = _load_borehole(db, borehole_id)
-    replace_validation_issues(borehole, validate_borehole(borehole))
-    db.flush()
-
     for suggestion in list(borehole.ai_suggestions):
         if suggestion.provider == "rule_based" and suggestion.status == "open":
             db.delete(suggestion)
+    db.flush()
+
+    replace_validation_issues(borehole, validate_borehole(borehole))
     db.flush()
     db.refresh(borehole)
 

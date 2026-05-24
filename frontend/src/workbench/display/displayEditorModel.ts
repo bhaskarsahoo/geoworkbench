@@ -140,7 +140,7 @@ export const TRACK_CATALOG: TrackCatalogItem[] = [
       title: "Curves",
       visible: true,
       width: 260,
-      curves: availableCurves.slice(0, 3).map((curve) => ({
+      curves: orderedCurves(availableCurves).map((curve) => ({
         curveKey: curve.key,
         label: curve.label,
         unit: curve.unit,
@@ -183,6 +183,10 @@ export function normalizeDisplayLayout(layout: DisplayLayout, availableCurves: C
   }
   draft.settings.widgets["log-widget"].tracks =
     draft.settings.widgets["log-widget"].tracks ?? defaultTracks(availableCurves);
+  draft.settings.widgets["log-widget"].tracks = syncTrackCurves(
+    draft.settings.widgets["log-widget"].tracks,
+    availableCurves,
+  );
   draft.settings.regions = draft.settings.regions ?? {
     left: ["validation-panel", "ai-workflow"],
     center: ["log-widget"],
@@ -285,6 +289,57 @@ export function createTrackId(baseId: string, existingIds: Set<string>) {
 
 export function defaultTracks(availableCurves: Curve[]): DisplayTrack[] {
   return TRACK_CATALOG.map((item) => item.create(availableCurves, new Set()));
+}
+
+function syncTrackCurves(tracks: DisplayTrack[], availableCurves: Curve[]): DisplayTrack[] {
+  return tracks.map((track) => {
+    if (track.type !== "curve") return track;
+    const configured = track.curves ?? [];
+    const configuredByKey = new Map(configured.map((curve) => [curve.curveKey, curve]));
+    const sourceCurves =
+      configured.length > 0
+        ? configured
+            .map((config) => availableCurves.find((curve) => curve.key === config.curveKey))
+            .filter((curve): curve is Curve => Boolean(curve))
+        : orderedCurves(availableCurves);
+    const curves = sourceCurves.map((curve) => {
+      const existing = configuredByKey.get(curve.key);
+      return existing
+        ? {
+            ...existing,
+            label: existing.label || curve.label,
+            unit: existing.unit || curve.unit,
+            color: existing.color || curve.color,
+            visible: existing.visible ?? true,
+            scale: existing.scale ?? defaultScaleForCurve(curve),
+          }
+        : {
+            curveKey: curve.key,
+            label: curve.label,
+            unit: curve.unit,
+            color: curve.color,
+            visible: true,
+            scale: defaultScaleForCurve(curve),
+          };
+    });
+    return {
+      ...track,
+      curves,
+      width: Math.max(track.width, availableCurves.length > 3 ? 320 : track.width),
+    };
+  });
+}
+
+function orderedCurves(curves: Curve[]) {
+  const preferredOrder = ["calp_incl", "ngamma", "sp", "res", "dens", "spr"];
+  return [...curves].sort((left, right) => {
+    const leftIndex = preferredOrder.indexOf(left.key);
+    const rightIndex = preferredOrder.indexOf(right.key);
+    if (leftIndex !== -1 || rightIndex !== -1) {
+      return (leftIndex === -1 ? 999 : leftIndex) - (rightIndex === -1 ? 999 : rightIndex);
+    }
+    return left.label.localeCompare(right.label);
+  });
 }
 
 function createCatalogWidget(type: string, availableCurves: Curve[]) {

@@ -857,8 +857,8 @@ h2 {
   position: sticky;
   top: 0;
   z-index: 6;
-  height: 42px;
-  padding: 6px 7px;
+  height: var(--track-header-height, 88px);
+  padding: 6px 7px 14px;
   border-bottom: 1px solid #d5cbbb;
   background: #eee4d3;
   font-weight: 700;
@@ -867,7 +867,7 @@ h2 {
 
 .track-body {
   position: absolute;
-  inset: 42px 0 0;
+  inset: var(--track-header-height, 88px) 0 0;
 }
 
 .track-title small {
@@ -900,6 +900,71 @@ h2 {
   width: 14px;
   height: 3px;
   border-radius: 999px;
+}
+
+.curve-header-stack {
+  display: grid;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.curve-header-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 4px;
+  color: #5a6670;
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.curve-header-min,
+.curve-header-max {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.curve-header-max {
+  text-align: right;
+}
+
+.curve-header-line {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, auto) auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  padding-top: 0;
+}
+
+.curve-header-line i {
+  display: inline-block;
+  width: 24px;
+  height: 4px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 12%);
+}
+
+.curve-header-line b,
+.curve-header-line small {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.curve-header-line b {
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.curve-header-line small {
+  color: #68737c;
+  font-size: 8px;
 }
 
 .depth-mark {
@@ -1183,8 +1248,8 @@ h2 {
 .field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 7px;
+  margin-bottom: 10px;
 }
 
 .field {
@@ -1215,7 +1280,7 @@ h2 {
   display: grid;
   gap: 8px;
   width: 100%;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   border: 1px solid #33414b;
   border-radius: 6px;
   background: #111518;
@@ -1238,6 +1303,34 @@ h2 {
 .core-preview span {
   color: #cfd9df;
   font-size: 12px;
+}
+
+.metadata-collapsible {
+  margin-bottom: 10px;
+  border: 1px solid #2e363d;
+  border-radius: 6px;
+  background: #111518;
+}
+
+.metadata-collapsible summary {
+  cursor: pointer;
+  color: #dce6eb;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.metadata-grid {
+  margin: 0;
+  padding: 0 8px 8px;
+}
+
+.metadata-grid .field {
+  padding: 6px;
+}
+
+.metadata-grid .field b {
+  font-size: 11px;
 }
 
 .edit-form label {

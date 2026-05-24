@@ -51,6 +51,19 @@ Flutter app -> POST /api/mobile/uploads
 
 This simulates a site geologist creating or updating borehole data while the central system remains the source of review and correction.
 
+### Geophysical PDF Import
+
+```text
+Pinnacle composite PDF
+  -> embedded text/vector profiling
+  -> depth-axis and curve-scale calibration
+  -> digitized curve samples
+  -> PostgreSQL Curve/CurveSample rows
+  -> workbench curve track and export readiness
+```
+
+This path is useful when the contractor has only provided a plotted composite log. It is an evidence import, not a replacement for raw LAS/CSV/DLIS. See [Geophysical PDF Import](geophysical-pdf-import.md).
+
 ## 2. Workbench Load
 
 ```text
@@ -201,4 +214,3 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8081
 ```
 
 The local runtime `.env` file is ignored by git. Use `.env.postgres.example` as the shareable template.
-
