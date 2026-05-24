@@ -310,7 +310,7 @@ h2 {
 
 .display-editor-shell {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr) 300px;
+  grid-template-columns: 72px minmax(0, 1fr) 300px;
   min-height: 0;
 }
 
@@ -329,15 +329,25 @@ h2 {
   border-left: 1px solid #2e363d;
 }
 
-.widget-collection button {
+.widget-palette {
   display: grid;
-  gap: 4px;
-  width: 100%;
-  margin-bottom: 8px;
-  text-align: left;
+  gap: 8px;
 }
 
-.widget-collection button span,
+.widget-palette button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  text-align: center;
+}
+
+.widget-palette button strong {
+  color: #dff8f3;
+  font-size: 12px;
+}
+
 .widget-settings-form small,
 .widget-inspector small {
   color: #9da8b1;
@@ -366,6 +376,7 @@ h2 {
 }
 
 .display-widget-tile {
+  position: relative;
   display: grid;
   align-content: start;
   gap: 6px;
@@ -374,6 +385,8 @@ h2 {
   border-color: #3a4853;
   background: #182127;
   text-align: left;
+  cursor: move;
+  user-select: none;
 }
 
 .display-widget-tile.selected {
@@ -389,6 +402,25 @@ h2 {
 
 .display-widget-tile small {
   color: #9ba7b0;
+}
+
+.display-widget-resize {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #4f626d;
+  border-radius: 3px;
+  background:
+    linear-gradient(135deg, transparent 0 45%, #86d8cc 45% 55%, transparent 55%),
+    #1f2a31;
+  padding: 0;
+  cursor: nwse-resize;
+}
+
+.display-widget-resize:hover {
+  border-color: #61cbbb;
 }
 
 .display-modal-empty {

@@ -150,7 +150,8 @@ The display editor is launched from the topbar. It uses a draft copy of the save
 - Add widget from widget collection
 - Remove widget
 - Clone widget
-- Drag widgets inside a grid canvas by swapping widget positions
+- Drag widgets directly to a grid location
+- Resize widgets directly from the lower-right resize handle
 - Right-click a widget to open widget settings
 
 Widget-level concepts:

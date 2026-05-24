@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import type { Curve, DisplayGridItem, DisplayLayout, DisplayTrack, DisplayWidget } from "../../api/types";
 import {
@@ -30,6 +30,14 @@ const SINGLE_VALUE_METRICS = [
   { value: "corebox_count", label: "Corebox images" },
 ];
 
+type GridGesture = {
+  type: "move" | "resize";
+  widgetId: string;
+  startClientX: number;
+  startClientY: number;
+  startItem: DisplayGridItem;
+};
+
 export function DisplayEditorDialog({
   open,
   layout,
@@ -44,7 +52,8 @@ export function DisplayEditorDialog({
   const [history, setHistory] = useState<DisplayLayout[]>([]);
   const [selectedWidgetId, setSelectedWidgetId] = useState("log-widget");
   const [settingsWidgetId, setSettingsWidgetId] = useState<string | null>(null);
-  const [dragWidgetId, setDragWidgetId] = useState<string | null>(null);
+  const [gesture, setGesture] = useState<GridGesture | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (open && layout) {
@@ -61,6 +70,44 @@ export function DisplayEditorDialog({
   const selectedWidget = selectedWidgetId ? widgets[selectedWidgetId] : null;
   const settingsWidget = settingsWidgetId ? widgets[settingsWidgetId] : null;
   const existingWidgetIds = useMemo(() => new Set(Object.keys(widgets)), [widgets]);
+
+  useEffect(() => {
+    if (!gesture) return;
+    const handlePointerMove = (event: PointerEvent) => {
+      setDraft((current) => {
+        if (!current?.settings.grid) return current;
+        const bounds = gridRef.current?.getBoundingClientRect();
+        const columns = current.settings.grid.columns;
+        const rowHeight = current.settings.grid.rowHeight;
+        const gap = 8;
+        const cellWidth = bounds ? Math.max(1, (bounds.width - gap * (columns - 1)) / columns) : 80;
+        const dx = Math.round((event.clientX - gesture.startClientX) / (cellWidth + gap));
+        const dy = Math.round((event.clientY - gesture.startClientY) / (rowHeight + gap));
+        const next = structuredClone(current);
+        next.settings.grid!.items = next.settings.grid!.items.map((item) => {
+          if (item.widgetId !== gesture.widgetId) return item;
+          if (gesture.type === "move") {
+            return clampGridItem(
+              { ...item, x: gesture.startItem.x + dx, y: gesture.startItem.y + dy },
+              columns,
+            );
+          }
+          return clampGridItem(
+            { ...item, w: gesture.startItem.w + dx, h: gesture.startItem.h + dy },
+            columns,
+          );
+        });
+        return next;
+      });
+    };
+    const handlePointerUp = () => setGesture(null);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [gesture]);
 
   if (!open) return null;
 
@@ -151,22 +198,23 @@ export function DisplayEditorDialog({
     });
   };
 
-  const swapWidgets = (sourceId: string, targetId: string) => {
-    if (sourceId === targetId) return;
-    updateDraft((current) => {
-      const source = current.settings.grid!.items.find((item) => item.widgetId === sourceId);
-      const target = current.settings.grid!.items.find((item) => item.widgetId === targetId);
-      if (!source || !target) return current;
-      const sourcePosition = { x: source.x, y: source.y, w: source.w, h: source.h };
-      source.x = target.x;
-      source.y = target.y;
-      source.w = target.w;
-      source.h = target.h;
-      target.x = sourcePosition.x;
-      target.y = sourcePosition.y;
-      target.w = sourcePosition.w;
-      target.h = sourcePosition.h;
-      return current;
+  const startGridGesture = (
+    type: GridGesture["type"],
+    widgetId: string,
+    item: DisplayGridItem,
+    event: ReactPointerEvent,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!draft) return;
+    setHistory((items) => [...items, structuredClone(draft)]);
+    setSelectedWidgetId(widgetId);
+    setGesture({
+      type,
+      widgetId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startItem: structuredClone(item),
     });
   };
 
@@ -211,17 +259,25 @@ export function DisplayEditorDialog({
 
         <div className="display-editor-shell">
           <aside className="widget-collection">
-            <h2>Widget Collection</h2>
+            <h2>Widgets</h2>
+            <div className="widget-palette">
             {WIDGET_CATALOG.map((item) => (
-              <button key={item.type} type="button" onClick={() => addWidget(item.type)}>
-                <strong>{item.label}</strong>
-                <span>{item.description}</span>
+              <button
+                key={item.type}
+                type="button"
+                title={item.label}
+                aria-label={`Add ${item.label}`}
+                onClick={() => addWidget(item.type)}
+              >
+                <strong>{item.icon}</strong>
               </button>
             ))}
+            </div>
           </aside>
 
           <section className="display-canvas-panel">
             <div
+              ref={gridRef}
               className="display-grid-canvas"
               style={{ gridTemplateColumns: `repeat(${draft.settings.grid?.columns ?? 12}, 1fr)` }}
             >
@@ -229,26 +285,21 @@ export function DisplayEditorDialog({
                 const widget = widgets[item.widgetId];
                 if (!widget) return null;
                 return (
-                  <button
+                  <div
                     key={item.widgetId}
-                    type="button"
-                    draggable
+                    role="button"
+                    tabIndex={0}
                     className={`display-widget-tile ${selectedWidgetId === item.widgetId ? "selected" : ""}`}
                     style={{
                       gridColumn: `${item.x + 1} / span ${item.w}`,
                       gridRow: `${item.y + 1} / span ${item.h}`,
                     }}
                     onClick={() => setSelectedWidgetId(item.widgetId)}
+                    onPointerDown={(event) => startGridGesture("move", item.widgetId, item, event)}
                     onContextMenu={(event) => {
                       event.preventDefault();
                       setSelectedWidgetId(item.widgetId);
                       setSettingsWidgetId(item.widgetId);
-                    }}
-                    onDragStart={() => setDragWidgetId(item.widgetId)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={() => {
-                      if (dragWidgetId) swapWidgets(dragWidgetId, item.widgetId);
-                      setDragWidgetId(null);
                     }}
                   >
                     <span>{widget.type}</span>
@@ -256,7 +307,14 @@ export function DisplayEditorDialog({
                     <small>
                       x{item.x} y{item.y} w{item.w} h{item.h}
                     </small>
-                  </button>
+                    <button
+                      type="button"
+                      className="display-widget-resize"
+                      title="Resize widget"
+                      aria-label={`Resize ${widget.title}`}
+                      onPointerDown={(event) => startGridGesture("resize", item.widgetId, item, event)}
+                    />
+                  </div>
                 );
               })}
             </div>
@@ -661,12 +719,13 @@ function moveItem<T>(items: T[], index: number, target: number) {
   return next;
 }
 
-function clampGridItem(item: DisplayGridItem): DisplayGridItem {
+function clampGridItem(item: DisplayGridItem, columns = 12): DisplayGridItem {
+  const width = Math.max(1, Math.min(columns, item.w));
   return {
     ...item,
-    x: Math.max(0, Math.min(11, item.x)),
+    w: width,
+    x: Math.max(0, Math.min(columns - width, item.x)),
     y: Math.max(0, Math.min(30, item.y)),
-    w: Math.max(1, Math.min(12, item.w)),
     h: Math.max(1, Math.min(12, item.h)),
   };
 }

@@ -3,6 +3,7 @@ import type { Curve, DisplayGridItem, DisplayLayout, DisplayTrack, DisplayWidget
 export type WidgetCatalogItem = {
   type: string;
   label: string;
+  icon: string;
   description: string;
   create: (availableCurves: Curve[], existingIds: Set<string>) => DisplayWidget;
 };
@@ -17,6 +18,7 @@ export const WIDGET_CATALOG: WidgetCatalogItem[] = [
   {
     type: "singleValue",
     label: "Single Value",
+    icon: "1V",
     description: "Compact KPI such as depth, interval count, curve count, or corebox count.",
     create: () => ({
       type: "singleValue",
@@ -28,6 +30,7 @@ export const WIDGET_CATALOG: WidgetCatalogItem[] = [
   {
     type: "logWidget",
     label: "Log Widget",
+    icon: "LG",
     description: "Depth-indexed borehole visualization with configurable tracks and curves.",
     create: (availableCurves) => ({
       type: "logWidget",
@@ -39,30 +42,35 @@ export const WIDGET_CATALOG: WidgetCatalogItem[] = [
   {
     type: "aiWorkflow",
     label: "AI Workflow",
+    icon: "AI",
     description: "Suggestion queue and assistant summary for central review.",
     create: () => ({ type: "aiWorkflow", title: "AI Workflow", settings: { showSummary: true } }),
   },
   {
     type: "intervalDetails",
     label: "Interval Details",
+    icon: "ID",
     description: "Selected-depth metadata, corebox preview, and geologist correction form.",
     create: () => ({ type: "intervalDetails", title: "Depth Metadata", settings: { editable: true } }),
   },
   {
     type: "exportPanel",
     label: "Export",
+    icon: "EX",
     description: "Approval checks and corrected-log export controls.",
     create: () => ({ type: "exportPanel", title: "Export", settings: { showReadiness: true } }),
   },
   {
     type: "validationPanel",
     label: "Validation",
+    icon: "VA",
     description: "Validation counts and issue list.",
     create: () => ({ type: "validationPanel", title: "Validation", settings: { maxIssues: 8 } }),
   },
   {
     type: "dataArrival",
     label: "Data Arrival",
+    icon: "DA",
     description: "Source file uploads, processing, and import actions.",
     create: () => ({ type: "dataArrival", title: "Data Arrival", settings: { allowUpload: true } }),
   },
