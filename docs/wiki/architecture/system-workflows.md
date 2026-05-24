@@ -1,0 +1,204 @@
+# System Workflows
+
+This document explains how data moves through the borehole correction system.
+
+## Full Demo Flow
+
+```text
+Site/mobile/Excel inputs
+  -> backend upload/import/mobile endpoints
+  -> PostgreSQL normalized borehole model
+  -> deterministic validation
+  -> AI suggestions and explanations
+  -> central geologist visualization and edits
+  -> approval
+  -> Excel/CSV/LAS export
+```
+
+## 1. Borehole Creation
+
+There are currently three creation paths.
+
+### Seeded Demo
+
+```text
+python backend/scripts/seed_demo.py
+```
+
+Creates PBH demo boreholes with lithology intervals, seams, curves, core images, layouts, and workflow states.
+
+### Excel Import
+
+```text
+python backend/scripts/profile_and_import_excel_workbooks.py
+```
+
+Or through the UI:
+
+```text
+Upload Excel -> Process -> Import borehole
+```
+
+The Excel service profiles workbook structure, extracts intervals, remarks, seams, metadata, and synthetic/known curves when available.
+
+### Mobile Field Submission
+
+```text
+Flutter app -> POST /api/mobile/demo-copy
+Flutter app -> POST /api/mobile/field-submissions
+Flutter app -> POST /api/mobile/uploads
+```
+
+This simulates a site geologist creating or updating borehole data while the central system remains the source of review and correction.
+
+## 2. Workbench Load
+
+```text
+React App
+  -> GET /api/boreholes
+  -> user selects borehole
+  -> GET /api/boreholes/{id}/workbench
+  -> frontend receives BoreholeWorkbench
+  -> LogWidget renders tracks
+  -> side panels render validation, AI, export, metadata
+```
+
+`BoreholeWorkbench` is intentionally broad. It gives the frontend one complete object for the central correction screen.
+
+## 3. Visualization And Interaction
+
+```text
+LogWidget
+  -> creates shared DepthScale
+  -> reads DisplayLayout tracks
+  -> renders one track component per visible track
+  -> TrackFrame converts mouse Y to depth
+  -> track hitTest finds the object under the pointer
+  -> interactions.ts updates UI state
+```
+
+Examples:
+
+| User Action | Result |
+| --- | --- |
+| Click lithology interval | Selects interval and shows metadata/edit form. |
+| Hover curve | Shows nearest curve sample and related curve values. |
+| Click grouped remarks | Opens grouped remarks popup. |
+| Click corebox preview | Opens full corebox image. |
+| Mouse wheel | Zooms visible depth window. |
+| Drag rubber band | Zooms to selected depth range. |
+| Right click | Opens context menu with zoom actions. |
+
+## 4. Validation
+
+```text
+POST /api/boreholes/{id}/validate
+  -> validate_borehole()
+  -> replace_validation_issues()
+  -> frontend reloads workbench
+```
+
+The validation engine is deterministic. It should remain the dependable source of quality findings.
+
+Current rule families:
+
+- interval gaps
+- interval overlaps
+- missing lithology code
+- invalid depth interval
+- recovery/RQD issues
+- curve depth coverage mismatch
+
+## 5. AI Suggestion Workflow
+
+```text
+ValidationIssue rows
+  -> AI service creates AiSuggestion rows
+  -> optional local OpenAI-compatible model improves wording
+  -> suggestions appear in AI panel and AI track
+  -> geologist accepts or rejects
+```
+
+AI does not own the final corrected log. It presents evidence, rationale, and suggested patches. The central geologist accepts, rejects, or manually edits.
+
+Accepting a patchable suggestion:
+
+```text
+POST /api/ai/suggestions/{id}/accept
+  -> updates target interval where supported
+  -> marks suggestion accepted
+  -> writes CorrectionAudit
+  -> reruns validation
+```
+
+## 6. Manual Correction
+
+```text
+Select interval in LogWidget
+  -> right panel shows editable form
+  -> Save correction
+  -> PATCH /api/boreholes/intervals/{interval_id}
+  -> CorrectionAudit row
+  -> validation rerun
+  -> workbench reload
+```
+
+Today, the editable fields are:
+
+- lithology code
+- lithology label
+- seam name
+- remarks
+
+Depth boundary editing is a future refinement because it has higher validation and visualization consequences.
+
+## 7. Export Approval
+
+```text
+POST /api/boreholes/{id}/approve-export
+```
+
+Approval is blocked if validation errors exist. Warnings and open AI suggestions are shown in readiness but do not automatically block in the current demo.
+
+## 8. Export Generation
+
+```text
+POST /api/exports/boreholes/{id}/jobs
+```
+
+Current export types:
+
+- `corrected_lithology_csv`
+- `corrected_lithology_xlsx`
+- `curves_csv`
+- `curves_las`
+
+Generated files are stored under:
+
+```text
+runtime-data/exports/{borehole_code}/
+```
+
+Final customer-specific Minex export should be added after they provide the exact expected template/import format.
+
+## 9. Local PostgreSQL Flow
+
+The local API currently uses:
+
+```text
+postgresql+psycopg://postgres:postgres@localhost:5432/geoworkbench
+```
+
+Setup:
+
+```powershell
+cd backend
+alembic upgrade head
+python scripts\seed_demo.py
+python scripts\profile_and_import_excel_workbooks.py
+python scripts\import_ctsj_ai_test.py
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8081
+```
+
+The local runtime `.env` file is ignored by git. Use `.env.postgres.example` as the shareable template.
+

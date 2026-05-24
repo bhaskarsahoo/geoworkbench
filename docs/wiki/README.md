@@ -14,3 +14,12 @@ This wiki is the long-form documentation home for the production borehole correc
 ## Documentation Principle
 
 Every milestone should update this wiki as part of delivery. The system should be explainable to geologists, administrators, IT teams, and future developers without relying on verbal handover.
+
+## Current Architecture Guides
+
+- [Development Architecture](architecture/development-architecture.md)
+- [Backend Architecture](architecture/backend-architecture.md)
+- [Frontend Architecture](architecture/frontend-architecture.md)
+- [Workbench Interaction Architecture](architecture/workbench-interaction-architecture.md)
+- [System Workflows](architecture/system-workflows.md)
+- [Refinement Guide](architecture/refinement-guide.md)
