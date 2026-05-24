@@ -43,6 +43,12 @@ export const WIDGET_CATALOG: WidgetCatalogItem[] = [
     create: () => ({ type: "aiWorkflow", title: "AI Workflow", settings: { showSummary: true } }),
   },
   {
+    type: "intervalDetails",
+    label: "Interval Details",
+    description: "Selected-depth metadata, corebox preview, and geologist correction form.",
+    create: () => ({ type: "intervalDetails", title: "Depth Metadata", settings: { editable: true } }),
+  },
+  {
     type: "exportPanel",
     label: "Export",
     description: "Approval checks and corrected-log export controls.",
@@ -159,11 +165,13 @@ export function normalizeDisplayLayout(layout: DisplayLayout, availableCurves: C
   draft.settings.schemaVersion = draft.settings.schemaVersion ?? 2;
   draft.settings.mode = draft.settings.mode ?? "runtime";
   draft.settings.widgets = draft.settings.widgets ?? {};
-  if (!draft.settings.widgets["log-widget"]) {
-    draft.settings.widgets["log-widget"] = WIDGET_CATALOG.find((item) => item.type === "logWidget")!.create(
-      availableCurves,
-      new Set(),
-    );
+  if (!draft.settings.grid) {
+    draft.settings.widgets = {
+      ...defaultRuntimeWidgets(availableCurves),
+      ...draft.settings.widgets,
+    };
+  } else if (!draft.settings.widgets["log-widget"]) {
+    draft.settings.widgets["log-widget"] = createCatalogWidget("logWidget", availableCurves);
   }
   draft.settings.widgets["log-widget"].tracks =
     draft.settings.widgets["log-widget"].tracks ?? defaultTracks(availableCurves);
@@ -175,7 +183,7 @@ export function normalizeDisplayLayout(layout: DisplayLayout, availableCurves: C
   draft.settings.grid = draft.settings.grid ?? {
     columns: 12,
     rowHeight: 72,
-    items: defaultGridItems(Object.keys(draft.settings.widgets)),
+    items: defaultRuntimeGridItems(),
   };
   const gridIds = new Set(draft.settings.grid.items.map((item) => item.widgetId));
   for (const widgetId of Object.keys(draft.settings.widgets)) {
@@ -187,6 +195,53 @@ export function normalizeDisplayLayout(layout: DisplayLayout, availableCurves: C
     (item) => Boolean(draft.settings.widgets?.[item.widgetId]),
   );
   return draft;
+}
+
+export function defaultRuntimeWidgets(availableCurves: Curve[]): Record<string, DisplayWidget> {
+  return {
+    "total-depth": {
+      type: "singleValue",
+      title: "Total Depth",
+      metric: "total_depth",
+      settings: { unit: "m" },
+    },
+    "interval-count": {
+      type: "singleValue",
+      title: "Intervals",
+      metric: "interval_count",
+    },
+    "curve-count": {
+      type: "singleValue",
+      title: "Curves",
+      metric: "curve_count",
+    },
+    "corebox-count": {
+      type: "singleValue",
+      title: "Coreboxes",
+      metric: "corebox_count",
+    },
+    "validation-panel": createCatalogWidget("validationPanel", availableCurves),
+    "ai-workflow": createCatalogWidget("aiWorkflow", availableCurves),
+    "log-widget": createCatalogWidget("logWidget", availableCurves),
+    "interval-details": createCatalogWidget("intervalDetails", availableCurves),
+    "export-panel": createCatalogWidget("exportPanel", availableCurves),
+    "data-arrival": createCatalogWidget("dataArrival", availableCurves),
+  };
+}
+
+export function defaultRuntimeGridItems(): DisplayGridItem[] {
+  return [
+    { widgetId: "total-depth", x: 0, y: 0, w: 2, h: 1 },
+    { widgetId: "interval-count", x: 2, y: 0, w: 2, h: 1 },
+    { widgetId: "curve-count", x: 4, y: 0, w: 2, h: 1 },
+    { widgetId: "corebox-count", x: 6, y: 0, w: 2, h: 1 },
+    { widgetId: "validation-panel", x: 0, y: 1, w: 2, h: 4 },
+    { widgetId: "ai-workflow", x: 0, y: 5, w: 2, h: 4 },
+    { widgetId: "log-widget", x: 2, y: 1, w: 7, h: 8 },
+    { widgetId: "interval-details", x: 9, y: 1, w: 3, h: 6 },
+    { widgetId: "export-panel", x: 9, y: 7, w: 3, h: 3 },
+    { widgetId: "data-arrival", x: 0, y: 9, w: 12, h: 3 },
+  ];
 }
 
 export function defaultScaleForCurve(curve: Curve) {
@@ -222,6 +277,10 @@ export function createTrackId(baseId: string, existingIds: Set<string>) {
 
 export function defaultTracks(availableCurves: Curve[]): DisplayTrack[] {
   return TRACK_CATALOG.map((item) => item.create(availableCurves, new Set()));
+}
+
+function createCatalogWidget(type: string, availableCurves: Curve[]) {
+  return WIDGET_CATALOG.find((item) => item.type === type)!.create(availableCurves, new Set());
 }
 
 function defaultGridItems(widgetIds: string[]) {

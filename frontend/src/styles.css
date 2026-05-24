@@ -80,26 +80,77 @@ button.active {
   background: #153734;
 }
 
-.workspace {
-  display: grid;
-  grid-template-columns: 270px 1fr 340px;
-  min-height: 0;
-}
-
-.side-panel,
-.details-panel {
+.runtime-display {
   min-height: 0;
   overflow: auto;
-  padding: 14px;
-  background: #181d21;
+  padding: 10px;
+  background: #101418;
 }
 
-.side-panel {
-  border-right: 1px solid #2e363d;
+.runtime-grid {
+  display: grid;
+  gap: 10px;
+  min-width: 1160px;
+  align-items: stretch;
 }
 
-.details-panel {
-  border-left: 1px solid #2e363d;
+.runtime-widget {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #2e363d;
+  border-radius: 6px;
+  background: #171d22;
+}
+
+.runtime-widget-header {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 10px;
+  border-bottom: 1px solid #2e363d;
+  background: #12181d;
+}
+
+.runtime-widget-header strong {
+  font-size: 12px;
+}
+
+.runtime-widget-body {
+  height: calc(100% - 36px);
+  overflow: auto;
+  padding: 10px;
+}
+
+.runtime-widget-logWidget {
+  border-color: #c9bba7;
+}
+
+.runtime-widget-logWidget .log-widget {
+  height: 100%;
+}
+
+.runtime-kpi {
+  display: grid;
+  align-content: center;
+  height: 100%;
+  gap: 4px;
+  padding: 12px;
+  background: #111518;
+}
+
+.runtime-kpi span {
+  color: #94a1aa;
+  font-size: 12px;
+}
+
+.runtime-kpi strong {
+  color: #eef4f7;
+  font-size: 22px;
+}
+
+.runtime-arrival-list {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
 h1,

@@ -61,16 +61,14 @@ frontend/src/app/
 
 This will make UI refinement less risky.
 
-### 1A. Make Runtime Fully Grid-Driven
+### 1A. Keep Runtime And Editor In Sync
 
-The display editor now saves widget grid positions and widget internals. Runtime still uses the established three-panel workbench composition for the demo.
+Runtime now renders widgets from `layout.settings.grid.items`. The editor and runtime should stay paired:
 
-Suggested sequence:
-
-1. Create `DisplayRuntime.tsx`.
-2. Render widgets from `layout.settings.grid.items`.
-3. Add runtime renderers for single value, validation, AI, export, data arrival, and log widget.
-4. Keep the current right metadata panel as a dedicated widget or fixed side panel depending on geologist feedback.
+1. Add widget catalog entries in `displayEditorModel.ts`.
+2. Add settings controls in `DisplayEditorDialog.tsx`.
+3. Add matching runtime rendering in `DisplayRuntime.tsx`.
+4. Add backend defaults in `display_layouts/defaults.py`.
 5. Keep `DisplayEditorDialog.tsx` as the editing surface and `DisplayRuntime.tsx` as the rendering surface.
 
 ### 2. Add Auth To Frontend

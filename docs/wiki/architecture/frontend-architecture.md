@@ -27,20 +27,10 @@ Topbar
   -> borehole selector
   -> display editor launcher
 
-Left panel
-  -> metrics
-  -> validation
-  -> AI workflow
-  -> export
-  -> data arrival/import files
-
-Center
-  -> LogWidget
-
-Right panel
-  -> selected interval metadata
-  -> corebox preview/full image
-  -> editable geologist correction form
+Runtime display
+  -> renders saved display grid
+  -> dispatches each saved widget by type
+  -> log widget, single value, validation, AI, export, data arrival, interval details
 
 Display editor dialog
   -> widget collection
@@ -184,7 +174,7 @@ Log widget track config has:
 - optional curve configs
 - optional quantitative field config
 
-`DisplayEditorDialog.tsx` owns the edit session. `displayEditorModel.ts` owns catalog/default/normalization helpers. `LogWidget.tsx` uses the saved `log-widget` settings to decide which track components to render.
+`DisplayEditorDialog.tsx` owns the edit session. `DisplayRuntime.tsx` renders the saved display grid during runtime. `displayEditorModel.ts` owns catalog/default/normalization helpers. `LogWidget.tsx` uses the saved log widget settings to decide which track components to render.
 
 ## Adding A New Track
 
@@ -202,7 +192,7 @@ Log widget track config has:
 1. Add a widget catalog entry in `displayEditorModel.ts`.
 2. Add any widget-specific persisted settings to `DisplayWidget` in `api/types.ts`.
 3. Add widget settings controls in `DisplayEditorDialog.tsx`.
-4. Add runtime rendering when the main display becomes fully grid-driven.
+4. Add runtime rendering in `DisplayRuntime.tsx`.
 5. Keep widget internals nested under `settings.widgets[widgetId]`.
 
 ## Refinement Hotspots
@@ -213,6 +203,7 @@ Log widget track config has:
 | Change click/hover behavior | `core/interactions.ts`, `TrackFrame.tsx`, track `hitTest` |
 | Improve curve rendering | `core/curveMath.ts`, `tracks/curve/CurveTrack.tsx` |
 | Improve display settings | `display/DisplayEditorDialog.tsx`, `display/displayEditorModel.ts`, backend layout defaults |
+| Improve runtime display rendering | `display/DisplayRuntime.tsx`, `display/displayEditorModel.ts` |
 | Add side-panel metadata | `App.tsx` right panel and backend workbench schema |
 | Add AI workflow UI | `workbench/ai/AiWorkflowPanel.tsx`, `tracks/aiSuggestions` |
 | Add export controls | `workbench/exports/ExportPanel.tsx` |
