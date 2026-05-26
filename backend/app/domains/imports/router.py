@@ -7,6 +7,7 @@ from app.domains.imports.schemas import (
     ImportProfileOut,
     SourceFileCreate,
     SourceFileImportOut,
+    SourceFileMergeOut,
     SourceFileOut,
     SourceFileProcessOut,
     SourceFileStatusPatch,
@@ -81,5 +82,23 @@ def import_source_file_as_borehole(
         source_file=source_file,
         borehole_id=borehole_id,
         borehole_code=borehole_code,
+        summary=summary,
+    )
+
+
+@router.post("/source-files/{source_file_id}/merge", response_model=SourceFileMergeOut)
+def merge_source_file_into_borehole(
+    source_file_id: int, db: Session = Depends(get_db)
+) -> SourceFileMergeOut:
+    try:
+        source_file, borehole_id, status, summary = service.merge_source_file_into_borehole(
+            db, source_file_id
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return SourceFileMergeOut(
+        source_file=source_file,
+        borehole_id=borehole_id,
+        status=status,
         summary=summary,
     )

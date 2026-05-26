@@ -12,6 +12,7 @@ import {
   getBoreholeAiSummary,
   getAiProviderStatus,
   importSourceFileAsBorehole,
+  mergeSourceFileIntoBorehole,
   listBoreholes,
   listExportJobs,
   listImportProfiles,
@@ -23,7 +24,7 @@ import {
   updateAiSuggestionStatus,
   updateInterval,
 } from "./api/client";
-import type { DisplayLayout, LithologyInterval } from "./api/types";
+import type { BoreholeListItem, DisplayLayout, LithologyInterval } from "./api/types";
 import { DisplayEditorDialog } from "./workbench/display/DisplayEditorDialog";
 import { DisplayRuntime } from "./workbench/display/DisplayRuntime";
 import { useWorkbenchStore } from "./workbench/display/workbenchStore";
@@ -31,6 +32,8 @@ import { useWorkbenchStore } from "./workbench/display/workbenchStore";
 export function App() {
   const queryClient = useQueryClient();
   const [boreholeId, setBoreholeId] = useState<number | null>(null);
+  const [view, setView] = useState<"landing" | "workbench">("landing");
+  const [displayChoice, setDisplayChoice] = useState("saved");
   const [displayEditorOpen, setDisplayEditorOpen] = useState(false);
   const { selectedInterval, setSelectedInterval, selectedImage, setSelectedImage } =
     useWorkbenchStore();
@@ -39,6 +42,7 @@ export function App() {
   const boreholes = useQuery({ queryKey: ["boreholes"], queryFn: listBoreholes });
   const importProfiles = useQuery({ queryKey: ["importProfiles"], queryFn: listImportProfiles });
   const activeId = boreholeId ?? boreholes.data?.[0]?.id;
+  const selectedBorehole = boreholes.data?.find((item) => item.id === activeId) ?? boreholes.data?.[0];
   const workbench = useQuery({
     queryKey: ["workbench", activeId],
     queryFn: () => getWorkbench(activeId as number),
@@ -151,6 +155,13 @@ export function App() {
       queryClient.invalidateQueries({ queryKey: ["workbench"] });
     },
   });
+  const mergeSourceFile = useMutation({
+    mutationFn: (sourceFileId: number) => mergeSourceFileIntoBorehole(sourceFileId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workbench", activeId] });
+      queryClient.invalidateQueries({ queryKey: ["boreholes"] });
+    },
+  });
 
   const selectedCoreImage = useMemo(() => {
     if (!selectedInterval || !workbench.data) return null;
@@ -166,18 +177,48 @@ export function App() {
       null
     );
   }, [selectedInterval, workbench.data]);
+  const runtimeWorkbenchData = useMemo(() => {
+    if (!workbench.data || displayChoice !== "default") return workbench.data;
+    return {
+      ...workbench.data,
+      layout: {
+        id: workbench.data.layout?.id ?? 0,
+        name: "Default Correction Display",
+        mode: "runtime",
+        settings: {},
+      },
+    };
+  }, [displayChoice, workbench.data]);
+
+  const openWorkbench = (id = activeId) => {
+    if (id) {
+      setBoreholeId(id);
+      setView("workbench");
+    }
+  };
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${view === "landing" ? "landing-shell" : ""}`}>
       <header className="topbar">
-        <div>
-          <strong>GeoWorkbench</strong>
-          <span>Borehole correction system</span>
-        </div>
+        <button type="button" className="brand-lockup" onClick={() => setView("landing")}>
+          <img src="/branding/simpro-logo.png" alt="Simpro" />
+          <span>
+            <strong>GeoWorkbench</strong>
+            <small>Borehole correction system</small>
+          </span>
+        </button>
         <div className="toolbar">
+          {view === "workbench" && (
+            <button type="button" onClick={() => setView("landing")}>
+              Boreholes
+            </button>
+          )}
           <select
             value={activeId ?? ""}
-            onChange={(event) => setBoreholeId(Number(event.target.value))}
+            onChange={(event) => {
+              const nextId = Number(event.target.value);
+              setBoreholeId(nextId);
+            }}
           >
             {boreholes.data?.map((item) => (
               <option key={item.id} value={item.id}>
@@ -185,21 +226,51 @@ export function App() {
               </option>
             ))}
           </select>
+          <select value={displayChoice} onChange={(event) => setDisplayChoice(event.target.value)}>
+            <option value="saved">Saved borehole display</option>
+            <option value="default">Default correction display</option>
+          </select>
+          <button
+            type="button"
+            onClick={() => openWorkbench()}
+            disabled={!activeId}
+          >
+            Open workbench
+          </button>
           <button
             className={displayEditorOpen ? "active" : ""}
-            onClick={() => setDisplayEditorOpen(true)}
+            onClick={() => {
+              if (activeId) setDisplayEditorOpen(true);
+            }}
             type="button"
+            disabled={!activeId}
           >
-            Edit display
+            Manage display
           </button>
         </div>
       </header>
 
-      {workbench.isLoading && <div className="empty">Loading borehole workbench...</div>}
-      {workbench.error && <div className="empty">Could not load workbench.</div>}
-      {workbench.data && (
+      {view === "landing" && (
+        <LandingPage
+          boreholes={boreholes.data ?? []}
+          loading={boreholes.isLoading}
+          activeId={selectedBorehole?.id ?? null}
+          displayChoice={displayChoice}
+          onDisplayChoice={setDisplayChoice}
+          onSelect={(id) => setBoreholeId(id)}
+          onOpen={(id) => openWorkbench(id)}
+          onManageDisplay={(id) => {
+            setBoreholeId(id);
+            setDisplayEditorOpen(true);
+          }}
+        />
+      )}
+
+      {view === "workbench" && workbench.isLoading && <div className="empty">Loading borehole workbench...</div>}
+      {view === "workbench" && workbench.error && <div className="empty">Could not load workbench.</div>}
+      {view === "workbench" && runtimeWorkbenchData && (
         <DisplayRuntime
-          data={workbench.data}
+          data={runtimeWorkbenchData}
           aiSummary={aiSummary.data}
           aiProvider={aiProvider.data}
           exportReadiness={exportReadiness.data}
@@ -216,6 +287,7 @@ export function App() {
           sourceUploading={uploadFile.isPending}
           sourceProcessing={processFile.isPending}
           sourceImporting={importBoreholeFile.isPending}
+          sourceMerging={mergeSourceFile.isPending}
           intervalSaving={saveInterval.isPending}
           onRunValidation={() => validateCurrent.mutate()}
           onGenerateAi={() => generateSuggestions.mutate()}
@@ -232,6 +304,7 @@ export function App() {
           onUploadSourceFile={(payload) => uploadFile.mutate(payload)}
           onProcessSourceFile={(sourceFileId) => processFile.mutate(sourceFileId)}
           onImportBoreholeFile={(sourceFileId) => importBoreholeFile.mutate(sourceFileId)}
+          onMergeSourceFile={(sourceFileId) => mergeSourceFile.mutate(sourceFileId)}
           onSaveInterval={(patch) => saveInterval.mutate(patch)}
           onSelectImage={(image) => setSelectedImage(image)}
         />
@@ -286,5 +359,162 @@ export function App() {
         onClose={() => setDisplayEditorOpen(false)}
       />
     </main>
+  );
+}
+
+type LandingPageProps = {
+  boreholes: BoreholeListItem[];
+  loading: boolean;
+  activeId: number | null;
+  displayChoice: string;
+  onDisplayChoice: (choice: string) => void;
+  onSelect: (id: number) => void;
+  onOpen: (id: number) => void;
+  onManageDisplay: (id: number) => void;
+};
+
+function LandingPage({
+  boreholes,
+  loading,
+  activeId,
+  displayChoice,
+  onDisplayChoice,
+  onSelect,
+  onOpen,
+  onManageDisplay,
+}: LandingPageProps) {
+  const active = boreholes.filter((item) => item.workflow_status !== "approved_for_export");
+  const historic = boreholes.filter((item) => item.workflow_status === "approved_for_export");
+  const selected = boreholes.find((item) => item.id === activeId) ?? boreholes[0];
+
+  return (
+    <section className="landing-page">
+      <div className="landing-hero">
+        <div>
+          <h1>Coal Borehole Review Workspace</h1>
+          <p>
+            Select a borehole, choose a display, and open the central interpretation workspace.
+            This page can later host unit settings, timezone preferences, project defaults, and
+            user display management.
+          </p>
+        </div>
+        <div className="landing-settings">
+          <strong>Workspace Setup</strong>
+          <label>
+            Display
+            <select value={displayChoice} onChange={(event) => onDisplayChoice(event.target.value)}>
+              <option value="saved">Saved borehole display</option>
+              <option value="default">Default correction display</option>
+            </select>
+          </label>
+          <label>
+            Unit profile
+            <select defaultValue="metric">
+              <option value="metric">Metric depth, SI units</option>
+              <option value="client">Client/project default</option>
+            </select>
+          </label>
+          <label>
+            Timezone
+            <select defaultValue="project">
+              <option value="project">Project timezone</option>
+              <option value="local">Local browser timezone</option>
+            </select>
+          </label>
+          <button type="button" disabled={!selected} onClick={() => selected && onOpen(selected.id)}>
+            Open selected workbench
+          </button>
+        </div>
+      </div>
+
+      {loading && <div className="empty">Loading boreholes...</div>}
+      {!loading && (
+        <div className="borehole-groups">
+          <BoreholeGroup
+            title="Active Boreholes"
+            boreholes={active}
+            activeId={activeId}
+            onSelect={onSelect}
+            onOpen={onOpen}
+            onManageDisplay={onManageDisplay}
+          />
+          <BoreholeGroup
+            title="Historic Boreholes"
+            boreholes={historic}
+            activeId={activeId}
+            onSelect={onSelect}
+            onOpen={onOpen}
+            onManageDisplay={onManageDisplay}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function BoreholeGroup({
+  title,
+  boreholes,
+  activeId,
+  onSelect,
+  onOpen,
+  onManageDisplay,
+}: {
+  title: string;
+  boreholes: BoreholeListItem[];
+  activeId: number | null;
+  onSelect: (id: number) => void;
+  onOpen: (id: number) => void;
+  onManageDisplay: (id: number) => void;
+}) {
+  return (
+    <section className="borehole-group">
+      <div className="borehole-group-header">
+        <h2>{title}</h2>
+        <span>{boreholes.length} boreholes</span>
+      </div>
+      <div className="borehole-card-grid">
+        {boreholes.map((item) => (
+          <article
+            key={item.id}
+            className={`borehole-card ${item.id === activeId ? "selected" : ""}`}
+            onClick={() => onSelect(item.id)}
+            onDoubleClick={() => onOpen(item.id)}
+            tabIndex={0}
+          >
+            <span>{item.project_code} / {item.site_code}</span>
+            <strong>{item.code}</strong>
+            <small>{item.title}</small>
+            <div>
+              <b>{item.total_depth} m</b>
+              <em>{item.workflow_status.replaceAll("_", " ")}</em>
+            </div>
+            <footer>
+              <span>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpen(item.id);
+                  }}
+                >
+                  Open
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onManageDisplay(item.id);
+                  }}
+                >
+                  Display
+                </button>
+              </span>
+            </footer>
+          </article>
+        ))}
+        {!boreholes.length && <div className="empty">No boreholes in this group.</div>}
+      </div>
+    </section>
   );
 }

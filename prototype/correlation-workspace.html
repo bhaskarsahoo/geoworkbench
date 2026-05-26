@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GeoWorkbench Correlation Workspace</title>
   <style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       background: #0f172a;
-      color: white;
+      color: #e2e8f0;
     }
 
     .header {
@@ -18,145 +20,154 @@
     }
 
     .workspace {
-      display: flex;
-      height: calc(100vh - 60px);
-    }
-
-    .left-panel {
-      width: 260px;
-      background: #111827;
-      border-right: 1px solid #1e293b;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-
-    .main {
-      flex: 1;
-      padding: 20px;
-      overflow: auto;
-    }
-
-    .right-panel {
-      width: 320px;
-      background: #111827;
-      border-left: 1px solid #1e293b;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-
-    .section {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 340px;
+      gap: 1px;
+      height: calc(100vh - 62px);
       background: #1e293b;
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 18px;
     }
 
-    .correlation-view {
-      display: flex;
-      gap: 40px;
-      align-items: flex-start;
-      margin-top: 20px;
+    .panel,
+    .main {
+      overflow: auto;
+      background: #111827;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      margin-bottom: 16px;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      background: #1e293b;
+      padding: 16px;
+    }
+
+    .badge {
+      display: inline-block;
+      border: 1px solid #f59e0b;
+      border-radius: 999px;
+      background: #3a2b10;
+      color: #fde68a;
+      padding: 4px 10px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .future-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(140px, 1fr));
+      gap: 20px;
+      align-items: end;
+      min-height: 360px;
+      border: 1px dashed #475569;
+      border-radius: 10px;
+      padding: 22px;
+      background: #0f172a;
     }
 
     .borehole {
-      width: 120px;
-      background: #111827;
-      border-radius: 10px;
-      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 90px 64px 52px 80px;
       border: 1px solid #334155;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #020617;
     }
+
+    .borehole strong {
+      padding: 8px;
+      background: #111827;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .sandstone { background: #b45309; }
+    .shale { background: #475569; }
+    .coal { background: #111111; }
+    .clay { background: #065f46; }
 
     .interval {
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      display: grid;
+      place-items: center;
+      border-top: 1px solid #0f172a;
       font-size: 12px;
-      border-bottom: 1px solid #0f172a;
     }
 
-    .sandstone { background: #b45309; height: 80px; }
-    .shale { background: #475569; height: 110px; }
-    .coal { background: #111111; height: 70px; }
-    .clay { background: #065f46; height: 100px; }
-
-    .ai-box {
-      background: #1e293b;
-      padding: 14px;
-      border-radius: 10px;
-      margin-bottom: 14px;
+    li {
+      margin-bottom: 8px;
     }
   </style>
 </head>
 <body>
-  <div class="header">GeoWorkbench — Seam Correlation Workspace</div>
+  <div class="header">GeoWorkbench - Seam Correlation Workspace</div>
 
   <div class="workspace">
-    <div class="left-panel">
-      <h3>Selected Boreholes</h3>
-      <div class="section">
-        <div>BH-17</div>
-        <div>BH-18</div>
-        <div>BH-22</div>
-        <div>BH-25</div>
+    <aside class="panel">
+      <div class="card">
+        <span class="badge">Future workspace</span>
+        <h3>Status</h3>
+        <p>
+          This page is a concept preview only. It is not connected to imported Excel workbooks,
+          lithology intervals, seam labels, or geophysical curves yet.
+        </p>
       </div>
 
-      <h3>Correlation Controls</h3>
-      <div class="section">
-        <p>AI Confidence Threshold</p>
-        <p>Seam Continuity Overlay</p>
-        <p>Anomaly Detection</p>
+      <div class="card">
+        <h3>Required Inputs</h3>
+        <ul>
+          <li>Multiple corrected boreholes from the same block</li>
+          <li>Consistent seam names or candidate seam intervals</li>
+          <li>Collar coordinates and reduced levels</li>
+          <li>Optional geophysical curves for boundary support</li>
+        </ul>
       </div>
-    </div>
+    </aside>
 
-    <div class="main">
-      <div class="section">
-        <h2>Coal Seam Correlation</h2>
-        <p>AI-assisted seam continuity analysis across neighboring boreholes.</p>
-
-        <div class="correlation-view">
+    <main class="main">
+      <div class="card">
+        <h2>Correlation Preview</h2>
+        <p>
+          The real implementation should compare boreholes side by side, draw candidate seam
+          correlation lines, and let the geologist accept, reject, or annotate each suggested link.
+        </p>
+        <div class="future-grid">
           <div class="borehole">
+            <strong>BH-17</strong>
             <div class="interval sandstone">Sandstone</div>
             <div class="interval shale">Shale</div>
-            <div class="interval coal">Seam-A</div>
+            <div class="interval coal">Seam A</div>
             <div class="interval clay">Clay</div>
           </div>
-
           <div class="borehole">
+            <strong>BH-18</strong>
             <div class="interval sandstone">Sandstone</div>
             <div class="interval shale">Shale</div>
-            <div class="interval coal">Seam-A</div>
+            <div class="interval coal">Seam A</div>
             <div class="interval clay">Clay</div>
           </div>
-
           <div class="borehole">
+            <strong>BH-22</strong>
             <div class="interval sandstone">Sandstone</div>
             <div class="interval shale">Shale</div>
-            <div class="interval coal">Seam-A?</div>
+            <div class="interval coal">Seam A?</div>
             <div class="interval clay">Clay</div>
           </div>
         </div>
       </div>
-    </div>
+    </main>
 
-    <div class="right-panel">
-      <h3>AI Geological Insights</h3>
-
-      <div class="ai-box">
-        Seam continuity probability between BH-17 and BH-18: 92%
+    <aside class="panel">
+      <div class="card">
+        <h3>Future AI Assistance</h3>
+        <ul>
+          <li>Suggest candidate seam matches across boreholes</li>
+          <li>Flag seam splits, thinning, or missing seam labels</li>
+          <li>Use curve signatures to support boundary review</li>
+          <li>Keep geologist approval as the final authority</li>
+        </ul>
       </div>
-
-      <div class="ai-box">
-        Possible seam thinning trend detected eastward.
-      </div>
-
-      <div class="ai-box">
-        Geological anomaly detected in BH-22 near 108m interval.
-      </div>
-
-      <div class="ai-box">
-        Suggested action: Validate seam interpretation manually.
-      </div>
-    </div>
+    </aside>
   </div>
 </body>
 </html>

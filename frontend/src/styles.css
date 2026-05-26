@@ -35,12 +35,28 @@ textarea {
   border-bottom: 1px solid #2e363d;
 }
 
-.topbar div:first-child {
+.brand-lockup {
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
 }
 
+.brand-lockup img {
+  width: 138px;
+  max-height: 42px;
+  object-fit: contain;
+}
+
+.brand-lockup span {
+  display: grid;
+  gap: 1px;
+}
+
+.brand-lockup small,
 .topbar span,
 .log-header p,
 small {
@@ -51,6 +67,172 @@ small {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.toolbar select {
+  max-width: 280px;
+}
+
+.landing-shell {
+  min-height: 100vh;
+}
+
+.landing-page {
+  overflow: auto;
+  padding: 18px;
+  background: #101418;
+}
+
+.landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.landing-hero > div {
+  min-width: 0;
+  border: 1px solid #2e363d;
+  border-radius: 6px;
+  background: #171d22;
+  padding: 18px;
+}
+
+.landing-hero h1 {
+  margin-bottom: 8px;
+  color: #f2f6f8;
+  font-size: 28px;
+}
+
+.landing-hero p {
+  max-width: 760px;
+  color: #b5c0c8;
+  line-height: 1.5;
+}
+
+.landing-settings {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.landing-settings strong {
+  color: #eef4f7;
+}
+
+.landing-settings label {
+  display: grid;
+  gap: 5px;
+  color: #aeb9c1;
+  font-size: 12px;
+}
+
+.landing-settings button {
+  margin-top: 4px;
+}
+
+.borehole-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.borehole-group {
+  display: grid;
+  gap: 10px;
+}
+
+.borehole-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.borehole-group-header h2 {
+  margin: 0;
+}
+
+.borehole-group-header span {
+  color: #98a4ad;
+  font-size: 12px;
+}
+
+.borehole-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.borehole-card {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #2e363d;
+  border-radius: 6px;
+  background: #171d22;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.borehole-card.selected {
+  border-color: #46b7a5;
+  background: #142624;
+}
+
+.borehole-card > span,
+.borehole-card small,
+.borehole-card em {
+  color: #9ba7b0;
+  font-size: 12px;
+}
+
+.borehole-card strong {
+  color: #eef4f7;
+  font-size: 18px;
+}
+
+.borehole-card div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.borehole-card b {
+  color: #62c4b7;
+}
+
+.borehole-card em {
+  font-style: normal;
+  text-transform: capitalize;
+}
+
+.borehole-card footer span {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.borehole-card footer button {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    align-items: stretch;
+    height: auto;
+    min-height: 58px;
+    padding: 8px 12px;
+    flex-direction: column;
+  }
+
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .landing-hero {
+    grid-template-columns: 1fr;
+  }
 }
 
 button,

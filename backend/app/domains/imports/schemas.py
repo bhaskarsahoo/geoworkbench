@@ -47,3 +47,10 @@ class SourceFileImportOut(BaseModel):
     borehole_id: int
     borehole_code: str
     summary: dict
+
+
+class SourceFileMergeOut(BaseModel):
+    source_file: SourceFileOut
+    borehole_id: int
+    status: str
+    summary: dict

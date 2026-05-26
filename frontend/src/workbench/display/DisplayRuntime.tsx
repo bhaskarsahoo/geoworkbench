@@ -36,6 +36,7 @@ type Props = {
   sourceUploading: boolean;
   sourceProcessing: boolean;
   sourceImporting: boolean;
+  sourceMerging: boolean;
   intervalSaving: boolean;
   onRunValidation: () => void;
   onGenerateAi: () => void;
@@ -47,6 +48,7 @@ type Props = {
   onUploadSourceFile: (payload: { file_type: string; file: File }) => void;
   onProcessSourceFile: (sourceFileId: number) => void;
   onImportBoreholeFile: (sourceFileId: number) => void;
+  onMergeSourceFile: (sourceFileId: number) => void;
   onSaveInterval: (patch: Partial<LithologyInterval>) => void;
   onSelectImage: (image: CoreImage) => void;
 };
@@ -261,6 +263,15 @@ function DataArrivalWidget({ title, ...props }: Props & { title: string }) {
             >
               {item.status === "parsed" ? "Parsed" : "Process"}
             </button>
+            {item.borehole_id === props.data.id && (
+              <button
+                type="button"
+                disabled={props.sourceMerging || ["merged", "mapping_required"].includes(item.status)}
+                onClick={() => props.onMergeSourceFile(item.id)}
+              >
+                {item.status === "merged" ? "Merged" : "Merge"}
+              </button>
+            )}
             {item.file_type === "excel" && (
               <button
                 type="button"

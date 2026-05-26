@@ -28,12 +28,23 @@ class GeoWorkbenchApi {
 
   Future<Map<String, dynamic>> submitFieldInterval({
     required int boreholeId,
-    required double fromDepth,
-    required double toDepth,
+    required double runFromDepth,
+    required double runToDepth,
+    required double lithologyFromDepth,
+    required double lithologyThickness,
+    required double recovery,
+    required double? recoveryPercent,
     required String lithologyCode,
+    required String lithologyLabel,
+    required String loggedColor,
+    required String seamName,
+    required double? rqd,
+    required String structuralFeatures,
+    required String grainSize,
+    required String coreDip,
     required String remarks,
   }) async {
-    final thickness = toDepth - fromDepth;
+    final toDepth = lithologyFromDepth + lithologyThickness;
     final response = await http.post(
       _uri('/api/mobile/field-submissions'),
       headers: {'Content-Type': 'application/json'},
@@ -42,15 +53,32 @@ class GeoWorkbenchApi {
         'submitted_by': 'android-demo-user',
         'current_depth': toDepth,
         'remarks': remarks,
+        'payload': {
+          'form_template': 'ctsj_descriptive_mobile_v1',
+          'run_from_depth': runFromDepth,
+          'run_to_depth': runToDepth,
+          'lithology_from_depth': lithologyFromDepth,
+          'lithology_thickness': lithologyThickness,
+          'grain_size': grainSize,
+          'core_dip': coreDip,
+        },
         'apply_to_log': true,
         'lithology_intervals': [
           {
-            'from_depth': fromDepth,
+            'from_depth': lithologyFromDepth,
             'to_depth': toDepth,
             'lithology_code': lithologyCode,
-            'lithology_label': lithologyCode,
-            'recovery': thickness,
-            'recovery_percent': 100,
+            'lithology_label': lithologyLabel.isEmpty ? lithologyCode : lithologyLabel,
+            'logged_color': loggedColor,
+            'seam_name': seamName,
+            'recovery': recovery,
+            'recovery_percent': recoveryPercent,
+            'rqd': rqd == null ? null : rqd / 100,
+            'structural_features': [
+              if (grainSize.isNotEmpty) 'Grain: $grainSize',
+              if (structuralFeatures.isNotEmpty) structuralFeatures,
+              if (coreDip.isNotEmpty) 'Core dip: $coreDip',
+            ].join(' | '),
             'remark': remarks,
           }
         ],

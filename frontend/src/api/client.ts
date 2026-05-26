@@ -155,6 +155,15 @@ export function importSourceFileAsBorehole(sourceFileId: number): Promise<{
   return request(`/imports/source-files/${sourceFileId}/import-borehole`, { method: "POST" });
 }
 
+export function mergeSourceFileIntoBorehole(sourceFileId: number): Promise<{
+  source_file: SourceFile;
+  borehole_id: number;
+  status: string;
+  summary: Record<string, unknown>;
+}> {
+  return request(`/imports/source-files/${sourceFileId}/merge`, { method: "POST" });
+}
+
 export function getExportReadiness(boreholeId: number): Promise<ExportReadiness> {
   return request<ExportReadiness>(`/exports/boreholes/${boreholeId}/readiness`);
 }
