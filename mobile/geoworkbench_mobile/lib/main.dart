@@ -34,6 +34,13 @@ class FieldSyncScreen extends StatefulWidget {
 class _FieldSyncScreenState extends State<FieldSyncScreen> {
   final _baseUrl = TextEditingController(text: 'http://192.168.1.3:8081');
   final _newCode = TextEditingController(text: 'CTSJ-30-P-02-ANDROID-DEMO');
+  final _projectCode = TextEditingController(text: 'DEMO-COAL');
+  final _projectName = TextEditingController(text: 'Demo Coal Block');
+  final _siteCode = TextEditingController(text: 'MOBILE-SITE');
+  final _emptyBoreholeCode = TextEditingController(text: 'MOBILE-BH-001');
+  final _emptyBoreholeTitle = TextEditingController(text: 'Mobile field borehole');
+  final _emptyTotalDepth = TextEditingController(text: '0');
+  final _state = TextEditingController(text: 'Jharkhand');
   final _runFromDepth = TextEditingController(text: '525.0');
   final _runToDepth = TextEditingController(text: '528.0');
   final _lithologyFromDepth = TextEditingController(text: '525.0');
@@ -53,6 +60,8 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
   int _sourceBoreholeId = 6;
   int? _createdBoreholeId;
   String _status = 'Ready';
+  String _busyLabel = '';
+  String _openSection = 'create-empty';
   bool _busy = false;
 
   GeoWorkbenchApi get _api => GeoWorkbenchApi(_baseUrl.text.trim());
@@ -71,6 +80,13 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
   void dispose() {
     _baseUrl.dispose();
     _newCode.dispose();
+    _projectCode.dispose();
+    _projectName.dispose();
+    _siteCode.dispose();
+    _emptyBoreholeCode.dispose();
+    _emptyBoreholeTitle.dispose();
+    _emptyTotalDepth.dispose();
+    _state.dispose();
     _runFromDepth.dispose();
     _runToDepth.dispose();
     _lithologyFromDepth.dispose();
@@ -100,6 +116,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
   Future<void> _run(String label, Future<Map<String, dynamic>> Function() action) async {
     setState(() {
       _busy = true;
+      _busyLabel = label;
       _status = '$label...';
     });
     try {
@@ -112,7 +129,10 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
     } catch (error) {
       setState(() => _status = error.toString());
     } finally {
-      setState(() => _busy = false);
+      setState(() {
+        _busy = false;
+        _busyLabel = '';
+      });
     }
   }
 
@@ -121,11 +141,19 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
       setState(() => _status = 'Create a mobile demo borehole first.');
       return;
     }
-    final result = await FilePicker.platform.pickFiles();
-    final path = result?.files.single.path;
-    if (path == null) return;
+    setState(() => _status = 'Opening Android file picker...');
+    final result = await FilePicker.platform.pickFiles(withData: false);
+    final file = result?.files.single;
+    final path = file?.path;
+    if (path == null) {
+      setState(
+        () => _status =
+            'Could not open selected file. Try placing it in Downloads, then pick it from Files > Downloads.',
+      );
+      return;
+    }
     await _run(
-      'Uploading $_fileType file',
+      'Uploading ${file?.name ?? _fileType}',
       () => _api.uploadSourceFile(
         boreholeId: _createdBoreholeId!,
         fileType: _fileType,
@@ -206,7 +234,11 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          StatusBanner(status: _status, busy: _busy, busyLabel: _busyLabel),
           _Section(
+            id: 'backend',
+            openId: _openSection,
+            onToggle: _toggleSection,
             title: 'Backend',
             children: [
               TextField(
@@ -216,7 +248,76 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
             ],
           ),
           _Section(
-            title: 'Demo Borehole Copy',
+            id: 'create-empty',
+            openId: _openSection,
+            onToggle: _toggleSection,
+            title: 'Create Empty Borehole',
+            children: [
+              TextField(
+                controller: _projectCode,
+                decoration: const InputDecoration(labelText: 'Project code'),
+              ),
+              TextField(
+                controller: _projectName,
+                decoration: const InputDecoration(labelText: 'Project name'),
+              ),
+              TextField(
+                controller: _siteCode,
+                decoration: const InputDecoration(labelText: 'Site / block code'),
+              ),
+              TextField(
+                controller: _emptyBoreholeCode,
+                decoration: const InputDecoration(labelText: 'Borehole code'),
+              ),
+              TextField(
+                controller: _emptyBoreholeTitle,
+                decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _emptyTotalDepth,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Current depth'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _state,
+                      decoration: const InputDecoration(labelText: 'State'),
+                    ),
+                  ),
+                ],
+              ),
+              FilledButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => _run(
+                          'Creating empty borehole',
+                          () => _api.createEmptyBorehole(
+                            projectCode: _projectCode.text.trim(),
+                            projectName: _projectName.text.trim(),
+                            siteCode: _siteCode.text.trim(),
+                            boreholeCode: _emptyBoreholeCode.text.trim(),
+                            title: _emptyBoreholeTitle.text.trim(),
+                            totalDepth: _optionalNumber(_emptyTotalDepth) ?? 0,
+                            state: _state.text.trim(),
+                          ),
+                        ),
+                icon: const Icon(Icons.add_location_alt),
+                label: Text(_busy && _busyLabel == 'Creating empty borehole'
+                    ? 'Creating...'
+                    : 'Create Empty Borehole'),
+              ),
+            ],
+          ),
+          _Section(
+            id: 'clone',
+            openId: _openSection,
+            onToggle: _toggleSection,
+            title: 'Create Demo Borehole Copy',
             children: [
               DropdownButtonFormField<int>(
                 initialValue: _sourceBoreholeId,
@@ -242,11 +343,16 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
                           ),
                         ),
                 icon: const Icon(Icons.sync),
-                label: const Text('Create Mobile Demo Borehole'),
+                label: Text(_busy && _busyLabel == 'Creating mobile demo copy'
+                    ? 'Cloning...'
+                    : 'Clone Existing Borehole'),
               ),
             ],
           ),
           _Section(
+            id: 'field-entry',
+            openId: _openSection,
+            onToggle: _toggleSection,
             title: 'Structured Field Log Entry',
             children: [
               Row(
@@ -350,11 +456,16 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
               FilledButton.icon(
                 onPressed: _canSyncInterval ? _syncStructuredInterval : null,
                 icon: const Icon(Icons.upload),
-                label: const Text('Sync Field Interval'),
+                label: Text(_busy && _busyLabel == 'Submitting field interval'
+                    ? 'Syncing...'
+                    : 'Sync Field Interval'),
               ),
             ],
           ),
           _Section(
+            id: 'upload',
+            openId: _openSection,
+            onToggle: _toggleSection,
             title: 'Upload Field File',
             children: [
               DropdownButtonFormField<String>(
@@ -371,54 +482,65 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
               FilledButton.icon(
                 onPressed: _busy || _createdBoreholeId == null ? null : _pickAndUpload,
                 icon: const Icon(Icons.attach_file),
-                label: const Text('Upload File'),
+                label: Text(_busy && _busyLabel.startsWith('Uploading')
+                    ? 'Uploading...'
+                    : 'Upload File'),
               ),
             ],
           ),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Status', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
-                  Text(_status),
-                  if (_createdBoreholeId != null) ...[
-                    const SizedBox(height: 8),
-                    Text('Central borehole id: $_createdBoreholeId'),
-                  ],
-                ],
-              ),
-            ),
+          _Section(
+            id: 'status',
+            openId: _openSection,
+            onToggle: _toggleSection,
+            title: 'Status',
+            children: [
+              Text(_status),
+              if (_createdBoreholeId != null) Text('Central borehole id: $_createdBoreholeId'),
+            ],
           ),
         ],
       ),
     );
   }
+
+  void _toggleSection(String id) {
+    setState(() => _openSection = _openSection == id ? '' : id);
+  }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
+class StatusBanner extends StatelessWidget {
+  const StatusBanner({
+    super.key,
+    required this.status,
+    required this.busy,
+    required this.busyLabel,
+  });
 
-  final String title;
-  final List<Widget> children;
+  final String status;
+  final bool busy;
+  final String busyLabel;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
+      color: busy ? Theme.of(context).colorScheme.secondaryContainer : null,
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Row(
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
-            ...children.map(
-              (child) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: child,
+            if (busy) ...[
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Text(
+                busy && busyLabel.isNotEmpty ? '$busyLabel...' : status,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
           ],
@@ -426,4 +548,52 @@ class _Section extends StatelessWidget {
       ),
     );
   }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({
+    required this.id,
+    required this.openId,
+    required this.onToggle,
+    required this.title,
+    required this.children,
+  });
+
+  final String id;
+  final String openId;
+  final ValueChanged<String> onToggle;
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListTile(
+            title: Text(title, style: Theme.of(context).textTheme.titleMedium),
+            trailing: Icon(isOpen ? Icons.expand_less : Icons.expand_more),
+            onTap: () => onToggle(id),
+          ),
+          if (isOpen)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: children.map(
+                  (child) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: child,
+                  ),
+                ).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  bool get isOpen => id == openId;
 }

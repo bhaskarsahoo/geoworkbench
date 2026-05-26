@@ -98,6 +98,19 @@ small {
   padding: 18px;
 }
 
+.landing-workflow-card {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.landing-workflow-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
 .landing-hero h1 {
   margin-bottom: 8px;
   color: #f2f6f8;
@@ -108,6 +121,48 @@ small {
   max-width: 760px;
   color: #b5c0c8;
   line-height: 1.5;
+}
+
+.workflow-diagram {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  align-items: stretch;
+  gap: 10px;
+}
+
+.workflow-step {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-height: 112px;
+  border: 1px solid #33404a;
+  border-radius: 6px;
+  background: #10161b;
+  padding: 12px;
+}
+
+.workflow-step::before {
+  content: "";
+  width: 28px;
+  height: 4px;
+  border-radius: 999px;
+  background: #54c2b2;
+}
+
+.workflow-step strong {
+  color: #eef4f7;
+  font-size: 13px;
+}
+
+.workflow-step span {
+  color: #aeb9c1;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.workflow-arrow {
+  display: none;
 }
 
 .landing-settings {
@@ -231,6 +286,10 @@ small {
   }
 
   .landing-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-diagram {
     grid-template-columns: 1fr;
   }
 }

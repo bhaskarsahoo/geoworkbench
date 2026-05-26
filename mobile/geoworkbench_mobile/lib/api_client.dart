@@ -26,6 +26,33 @@ class GeoWorkbenchApi {
     return _decode(response);
   }
 
+  Future<Map<String, dynamic>> createEmptyBorehole({
+    required String projectCode,
+    required String projectName,
+    required String siteCode,
+    required String boreholeCode,
+    required String title,
+    required double totalDepth,
+    required String state,
+  }) async {
+    final response = await http.post(
+      _uri('/api/mobile/boreholes'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'project_code': projectCode,
+        'project_name': projectName,
+        'site_code': siteCode,
+        'site_name': siteCode,
+        'borehole_code': boreholeCode,
+        'title': title,
+        'total_depth': totalDepth,
+        'state': state,
+        'current_depth': totalDepth,
+      }),
+    );
+    return _decode(response);
+  }
+
   Future<Map<String, dynamic>> submitFieldInterval({
     required int boreholeId,
     required double runFromDepth,

@@ -165,6 +165,46 @@ def generate_suggestions(db: Session, borehole_id: int) -> list[AiSuggestion]:
     existing_issue_ids = {
         item.validation_issue_id for item in borehole.ai_suggestions if item.validation_issue_id is not None
     }
+    curve_coverage_issues = [
+        issue for issue in borehole.validation_issues if issue.code == "curve_depth_range_mismatch"
+    ]
+    if curve_coverage_issues:
+        labels = [
+            (issue.issue_metadata or {}).get("curve_label")
+            or (issue.issue_metadata or {}).get("curve_key")
+            or issue.message
+            for issue in curve_coverage_issues
+        ]
+        borehole.ai_suggestions.append(
+            AiSuggestion(
+                borehole_id=borehole.id,
+                provider="rule_based",
+                validation_issue_id=curve_coverage_issues[0].id,
+                suggestion_type="curve_depth_range_mismatch",
+                title="Geophysical curve coverage needs review",
+                rationale=(
+                    f"{len(curve_coverage_issues)} imported curve(s) do not cover the full borehole "
+                    "depth range."
+                ),
+                recommended_action=(
+                    "Treat these imported geophysical curves as partial evidence. Confirm whether "
+                    "the missing depth coverage is expected before using them for correction."
+                ),
+                confidence=0.64,
+                from_depth=None,
+                to_depth=None,
+                entity_type="curve",
+                entity_id=None,
+                patch=None,
+                evidence={
+                    "validation_code": "curve_depth_range_mismatch",
+                    "severity": "info",
+                    "curves": labels,
+                    "provider_note": "Grouped deterministic validation assistant finding.",
+                },
+            )
+        )
+        existing_issue_ids.update(issue.id for issue in curve_coverage_issues)
     for issue in borehole.validation_issues:
         if issue.id in existing_issue_ids:
             continue

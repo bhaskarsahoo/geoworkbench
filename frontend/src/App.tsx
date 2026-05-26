@@ -390,13 +390,22 @@ function LandingPage({
   return (
     <section className="landing-page">
       <div className="landing-hero">
-        <div>
-          <h1>Coal Borehole Review Workspace</h1>
-          <p>
-            Select a borehole, choose a display, and open the central interpretation workspace.
-            This page can later host unit settings, timezone preferences, project defaults, and
-            user display management.
-          </p>
+        <div className="landing-workflow-card">
+          <div className="landing-workflow-title">
+            <h1>Coal Borehole Review Workspace</h1>
+            <p>From site capture to corrected log export, with the geologist in control.</p>
+          </div>
+          <div className="workflow-diagram" aria-label="GeoWorkbench workflow">
+            <WorkflowStep title="Site Inputs" detail="Mobile forms, Excel, LAS/PDF, corebox images" />
+            <WorkflowArrow />
+            <WorkflowStep title="Import Templates" detail="Known workbook shapes, curve adapters, file storage" />
+            <WorkflowArrow />
+            <WorkflowStep title="Central Display" detail="Lithology, curves, corebox, remarks, metadata" />
+            <WorkflowArrow />
+            <WorkflowStep title="AI Review" detail="Validation, suggestions, evidence summaries" />
+            <WorkflowArrow />
+            <WorkflowStep title="Geologist Sign-off" detail="Override, comments, audit trail, export" />
+          </div>
         </div>
         <div className="landing-settings">
           <strong>Workspace Setup</strong>
@@ -450,6 +459,19 @@ function LandingPage({
       )}
     </section>
   );
+}
+
+function WorkflowStep({ title, detail }: { title: string; detail: string }) {
+  return (
+    <div className="workflow-step">
+      <strong>{title}</strong>
+      <span>{detail}</span>
+    </div>
+  );
+}
+
+function WorkflowArrow() {
+  return <div className="workflow-arrow" aria-hidden="true">→</div>;
 }
 
 function BoreholeGroup({
