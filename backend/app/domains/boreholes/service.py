@@ -1,5 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
+from pathlib import Path
+import json
 
 from app.db.models import Borehole, CoreImage, CorrectionAudit, Curve, DisplayLayout, LithologyInterval, Project, Site
 from app.domains.boreholes.schemas import (
@@ -74,17 +76,42 @@ def get_workbench(db: Session, borehole_id: int) -> BoreholeWorkbenchOut:
         for curve in sorted(borehole.curves, key=lambda item: item.key)
     ]
 
-    images = [
-        CoreImageOut(
-            box_number=image.box_number,
-            name=image.name,
-            file_path=image.file_path,
-            from_depth=image.from_depth,
-            to_depth=image.to_depth,
-            url=f"/assets/corebox/{image.name}",
+    strip_manifest_path = Path(__file__).resolve().parents[4] / "MTSE-65(PBH 62)" / "core-strips" / borehole.code / "manifest.json"
+    strip_manifest_by_box: dict[int, dict] = {}
+    if strip_manifest_path.exists():
+        manifest = json.loads(strip_manifest_path.read_text(encoding="utf-8"))
+        strip_manifest_by_box = {
+            int(box["box_number"]): box
+            for box in manifest.get("boxes", [])
+            if box.get("box_number") is not None
+        }
+
+    images = []
+    for image in sorted(borehole.core_images, key=lambda item: item.box_number):
+        original_name = Path(image.file_path or image.name).name
+        if image.name.startswith("demo-coal-block/"):
+            original_name = image.name
+        strip_name = f"core-strips/{borehole.code}/{image.box_number:03d}.jpg"
+        strip_path = Path(__file__).resolve().parents[4] / "MTSE-65(PBH 62)" / strip_name
+        strip_url = (
+            f"/assets/corebox/{strip_name}?v={int(strip_path.stat().st_mtime)}"
+            if strip_path.exists()
+            else None
         )
-        for image in sorted(borehole.core_images, key=lambda item: item.box_number)
-    ]
+        original_url = f"/assets/corebox/{original_name}"
+        images.append(
+            CoreImageOut(
+                box_number=image.box_number,
+                name=image.name,
+                file_path=image.file_path,
+                from_depth=image.from_depth,
+                to_depth=image.to_depth,
+                url=strip_url or original_url,
+                original_url=original_url,
+                strip_url=strip_url,
+                strip_metadata=strip_manifest_by_box.get(image.box_number),
+            )
+        )
 
     layout = borehole.display_layouts[0] if borehole.display_layouts else None
     return BoreholeWorkbenchOut(

@@ -25,6 +25,7 @@ import {
   updateInterval,
 } from "./api/client";
 import type { BoreholeListItem, DisplayLayout, LithologyInterval } from "./api/types";
+import { CorrelationWorkspace } from "./workbench/correlation/CorrelationWorkspace";
 import { DisplayEditorDialog } from "./workbench/display/DisplayEditorDialog";
 import { DisplayRuntime } from "./workbench/display/DisplayRuntime";
 import { useWorkbenchStore } from "./workbench/display/workbenchStore";
@@ -32,7 +33,7 @@ import { useWorkbenchStore } from "./workbench/display/workbenchStore";
 export function App() {
   const queryClient = useQueryClient();
   const [boreholeId, setBoreholeId] = useState<number | null>(null);
-  const [view, setView] = useState<"landing" | "workbench">("landing");
+  const [view, setView] = useState<"landing" | "workbench" | "correlation">("landing");
   const [displayChoice, setDisplayChoice] = useState("saved");
   const [displayEditorOpen, setDisplayEditorOpen] = useState(false);
   const { selectedInterval, setSelectedInterval, selectedImage, setSelectedImage } =
@@ -43,6 +44,12 @@ export function App() {
   const importProfiles = useQuery({ queryKey: ["importProfiles"], queryFn: listImportProfiles });
   const activeId = boreholeId ?? boreholes.data?.[0]?.id;
   const selectedBorehole = boreholes.data?.find((item) => item.id === activeId) ?? boreholes.data?.[0];
+  const correlationBoreholes = useMemo(() => {
+    const items = boreholes.data ?? [];
+    const synthetic = items.filter((item) => item.project_code === "DEMO-COAL-BLOCK");
+    return synthetic.length ? synthetic : items.slice(0, 5);
+  }, [boreholes.data]);
+  const correlationIds = correlationBoreholes.slice(0, 5).map((item) => item.id);
   const workbench = useQuery({
     queryKey: ["workbench", activeId],
     queryFn: () => getWorkbench(activeId as number),
@@ -208,11 +215,19 @@ export function App() {
           </span>
         </button>
         <div className="toolbar">
-          {view === "workbench" && (
+          {view !== "landing" && (
             <button type="button" onClick={() => setView("landing")}>
               Boreholes
             </button>
           )}
+          <button
+            type="button"
+            className={view === "correlation" ? "active" : ""}
+            onClick={() => setView("correlation")}
+            disabled={!correlationIds.length}
+          >
+            Correlation
+          </button>
           <select
             value={activeId ?? ""}
             onChange={(event) => {
@@ -262,6 +277,18 @@ export function App() {
           onManageDisplay={(id) => {
             setBoreholeId(id);
             setDisplayEditorOpen(true);
+          }}
+          onOpenCorrelation={() => setView("correlation")}
+        />
+      )}
+
+      {view === "correlation" && (
+        <CorrelationWorkspace
+          boreholes={correlationBoreholes}
+          initialIds={correlationIds}
+          onOpenWorkbench={(id) => {
+            setBoreholeId(id);
+            setView("workbench");
           }}
         />
       )}
@@ -321,7 +348,7 @@ export function App() {
               Close
             </button>
           </div>
-          <img src={selectedImage.url} alt={`Corebox ${selectedImage.box_number}`} />
+          <img src={selectedImage.original_url ?? selectedImage.url} alt={`Corebox ${selectedImage.box_number}`} />
         </div>
       )}
       {selectedRemarkGroup && (
@@ -371,6 +398,7 @@ type LandingPageProps = {
   onSelect: (id: number) => void;
   onOpen: (id: number) => void;
   onManageDisplay: (id: number) => void;
+  onOpenCorrelation: () => void;
 };
 
 function LandingPage({
@@ -382,6 +410,7 @@ function LandingPage({
   onSelect,
   onOpen,
   onManageDisplay,
+  onOpenCorrelation,
 }: LandingPageProps) {
   const active = boreholes.filter((item) => item.workflow_status !== "approved_for_export");
   const historic = boreholes.filter((item) => item.workflow_status === "approved_for_export");
@@ -432,6 +461,9 @@ function LandingPage({
           </label>
           <button type="button" disabled={!selected} onClick={() => selected && onOpen(selected.id)}>
             Open selected workbench
+          </button>
+          <button type="button" onClick={onOpenCorrelation}>
+            Open correlation display
           </button>
         </div>
       </div>

@@ -1,13 +1,15 @@
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import type { BoreholeWorkbench } from "../../api/types";
 import { createDepthScale } from "../core/depthScale";
 import { handleTrackPointerEvent } from "../core/interactions";
+import { legendForIntervals } from "../core/lithologyPatterns";
 import type { TrackPointerEvent } from "../core/trackObject";
 import { useWorkbenchStore } from "../display/workbenchStore";
 import { AiSuggestionsTrack } from "../tracks/aiSuggestions/AiSuggestionsTrack";
 import { CurveTrack } from "../tracks/curve/CurveTrack";
 import { DepthTrack } from "../tracks/depth/DepthTrack";
+import { ImageTrack } from "../tracks/images/ImageTrack";
 import { LithologyTrack } from "../tracks/lithology/LithologyTrack";
 import { QuantitativeBarTrack } from "../tracks/quantitativeBar/QuantitativeBarTrack";
 import { RemarksTrack } from "../tracks/remarks/RemarksTrack";
@@ -18,6 +20,8 @@ type Props = {
 };
 
 export function LogWidget({ data }: Props) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const pendingFocusDepth = useRef<number | null>(null);
   const store = useWorkbenchStore();
   const {
     selectedDepth,
@@ -35,7 +39,7 @@ export function LogWidget({ data }: Props) {
     currentDepth: number;
   } | null>(null);
   const tracks = data.layout?.settings.widgets?.["log-widget"]?.tracks ?? [];
-  const visibleTracks = tracks.filter((track) => track.visible && track.type !== "images");
+  const visibleTracks = tracks.filter((track) => track.visible);
   const maxVisibleCurves = Math.max(
     0,
     ...visibleTracks
@@ -43,22 +47,46 @@ export function LogWidget({ data }: Props) {
       .map((track) => track.curves?.filter((curve) => curve.visible).length ?? 0),
   );
   const headerHeight = Math.max(88, 46 + maxVisibleCurves * 14);
-  const height = Math.max(720, data.total_depth * 1.35);
-  const scale = createDepthScale(
-    data.total_depth,
-    height,
-    headerHeight,
-    depthWindow?.fromDepth ?? 0,
-    depthWindow?.toDepth ?? data.total_depth,
-  );
+  const lithologyLegend = legendForIntervals(data.lithology_intervals);
+  const baseHeight = Math.max(720, data.total_depth * 1.35);
+  const maxZoomFactor = 48;
+  const minZoomSpan = Math.max(5, data.total_depth / maxZoomFactor);
+  const zoomSpan = depthWindow ? Math.max(minZoomSpan, depthWindow.toDepth - depthWindow.fromDepth) : data.total_depth;
+  const zoomFactor = depthWindow ? Math.min(maxZoomFactor, data.total_depth / zoomSpan) : 1;
+  const height = Math.round(baseHeight * zoomFactor);
+  const scale = createDepthScale(data.total_depth, height, headerHeight, 0, data.total_depth);
   const totalConfiguredWidth = visibleTracks.reduce((sum, track) => sum + track.width, 0);
   const widthForTrack = (trackWidth: number) =>
     totalConfiguredWidth > 0 ? `${(trackWidth / totalConfiguredWidth) * 100}%` : `${100 / visibleTracks.length}%`;
   const onTrackEvent = (event: TrackPointerEvent) => handleTrackPointerEvent(event, store);
+
+  const normalizeZoomWindow = (fromDepth: number, toDepth: number) => {
+    const requestedSpan = Math.abs(toDepth - fromDepth);
+    const nextSpan = Math.min(data.total_depth, Math.max(minZoomSpan, requestedSpan));
+    const centerDepth = Math.max(0, Math.min(data.total_depth, (fromDepth + toDepth) / 2));
+    let normalizedFrom = centerDepth - nextSpan / 2;
+    let normalizedTo = centerDepth + nextSpan / 2;
+    if (normalizedFrom < 0) {
+      normalizedFrom = 0;
+      normalizedTo = nextSpan;
+    }
+    if (normalizedTo > data.total_depth) {
+      normalizedTo = data.total_depth;
+      normalizedFrom = data.total_depth - nextSpan;
+    }
+    return { fromDepth: normalizedFrom, toDepth: normalizedTo };
+  };
+
+  const setZoomWindow = (fromDepth: number, toDepth: number, focusDepth = (fromDepth + toDepth) / 2) => {
+    pendingFocusDepth.current = focusDepth;
+    setDepthWindow(normalizeZoomWindow(fromDepth, toDepth));
+  };
+
   const applyZoom = (centerDepth: number, factor: number) => {
-    const span = scale.visibleSpan;
-    const nextSpan = Math.max(2, Math.min(data.total_depth, span * factor));
-    const ratio = (centerDepth - scale.fromDepth) / span;
+    const span = depthWindow ? depthWindow.toDepth - depthWindow.fromDepth : data.total_depth;
+    const nextSpan = Math.max(minZoomSpan, Math.min(data.total_depth, span * factor));
+    const from = depthWindow?.fromDepth ?? 0;
+    const ratio = Math.max(0, Math.min(1, (centerDepth - from) / span));
     let fromDepth = centerDepth - nextSpan * ratio;
     let toDepth = fromDepth + nextSpan;
     if (fromDepth < 0) {
@@ -69,8 +97,16 @@ export function LogWidget({ data }: Props) {
       toDepth = data.total_depth;
       fromDepth = data.total_depth - nextSpan;
     }
-    setDepthWindow({ fromDepth, toDepth });
+    setZoomWindow(fromDepth, toDepth, centerDepth);
   };
+
+  useEffect(() => {
+    const focusDepth = pendingFocusDepth.current;
+    if (focusDepth === null || !scrollRef.current) return;
+    const targetTop = scale.topOffset + scale.depthToY(focusDepth) - scrollRef.current.clientHeight * 0.35;
+    scrollRef.current.scrollTop = Math.max(0, targetTop);
+    pendingFocusDepth.current = null;
+  }, [depthWindow, height, scale]);
 
   return (
     <div className="log-widget">
@@ -84,7 +120,15 @@ export function LogWidget({ data }: Props) {
         </div>
         <span className="status-pill">Seeded demo data</span>
       </div>
-      <div className="track-scroll">
+      <div className="lithology-legend">
+        {lithologyLegend.map((item) => (
+          <span key={item.code}>
+            <i className={`lithology-pattern ${item.className}`} style={{ backgroundColor: item.color }} />
+            {item.label}
+          </span>
+        ))}
+      </div>
+      <div className="track-scroll" ref={scrollRef}>
         <div
           className="track-row"
           style={
@@ -120,7 +164,7 @@ export function LogWidget({ data }: Props) {
             const fromDepth = Math.min(rubberBand.startDepth, rubberBand.currentDepth);
             const toDepth = Math.max(rubberBand.startDepth, rubberBand.currentDepth);
             if (toDepth - fromDepth >= 1) {
-              setDepthWindow({ fromDepth, toDepth });
+              setZoomWindow(fromDepth, toDepth);
             }
             setRubberBand(null);
           }}
@@ -162,6 +206,18 @@ export function LogWidget({ data }: Props) {
             if (track.type === "seam") {
               return (
                 <SeamTrack
+                  key={track.id}
+                  data={data}
+                  track={track}
+                  scale={scale}
+                  widthStyle={widthForTrack(track.width)}
+                  onTrackEvent={onTrackEvent}
+                />
+              );
+            }
+            if (track.type === "images") {
+              return (
+                <ImageTrack
                   key={track.id}
                   data={data}
                   track={track}
@@ -256,7 +312,13 @@ export function LogWidget({ data }: Props) {
               <button type="button" onClick={() => applyZoom(contextMenu.depth, 1.6)}>
                 Zoom out here
               </button>
-              <button type="button" onClick={() => setDepthWindow(null)}>
+              <button
+                type="button"
+                onClick={() => {
+                  pendingFocusDepth.current = contextMenu.depth;
+                  setDepthWindow(null);
+                }}
+              >
                 Full depth
               </button>
               <button
@@ -280,7 +342,13 @@ export function LogWidget({ data }: Props) {
           <span>
             Zoom {depthWindow.fromDepth.toFixed(2)}m - {depthWindow.toDepth.toFixed(2)}m
           </span>
-          <button type="button" onClick={() => setDepthWindow(null)}>
+          <button
+            type="button"
+            onClick={() => {
+              pendingFocusDepth.current = depthWindow.fromDepth;
+              setDepthWindow(null);
+            }}
+          >
             Full depth
           </button>
         </div>

@@ -1,7 +1,10 @@
+import { useMemo, useState } from "react";
+
 import { exportDownloadUrl } from "../../api/client";
-import type { ExportJob, ExportReadiness } from "../../api/types";
+import type { BoreholeWorkbench, ExportJob, ExportReadiness } from "../../api/types";
 
 type Props = {
+  data: BoreholeWorkbench;
   readiness: ExportReadiness | undefined;
   jobs: ExportJob[] | undefined;
   creating: boolean;
@@ -10,12 +13,82 @@ type Props = {
   onApprove: () => void;
 };
 
-export function ExportPanel({ readiness, jobs, creating, approving, onCreate, onApprove }: Props) {
+const EXPORT_FORMATS = [
+  { value: "corrected_lithology_xlsx", label: "Corrected log Excel" },
+  { value: "corrected_lithology_csv", label: "Corrected log CSV" },
+  { value: "curves_las", label: "Curve LAS" },
+  { value: "curves_csv", label: "Curve CSV" },
+  { value: "minex_demo", label: "Minex template preview" },
+];
+
+export function ExportPanel({ data, readiness, jobs, creating, approving, onCreate, onApprove }: Props) {
+  const [format, setFormat] = useState("corrected_lithology_xlsx");
+  const [stage, setStage] = useState("central_corrected");
+  const [fromDepth, setFromDepth] = useState("0");
+  const [toDepth, setToDepth] = useState(String(data.total_depth));
+  const [sections, setSections] = useState({
+    lithology: true,
+    seams: true,
+    recovery: true,
+    rqd: true,
+    curves: true,
+    images: false,
+    audit: false,
+  });
+  const selectedCurveKeys = useMemo(() => data.curves.map((curve) => curve.key), [data.curves]);
+  const exportType = format === "minex_demo" ? "corrected_lithology_xlsx" : format;
+  const toggleSection = (key: keyof typeof sections) =>
+    setSections((current) => ({ ...current, [key]: !current[key] }));
+
   return (
     <div className="export-panel">
       <div className={`export-status ${readiness?.ready ? "ready" : "blocked"}`}>
         <strong>{readiness?.ready ? "Ready for export" : "Review before export"}</strong>
         <span>{readiness?.status ?? "checking"}</span>
+      </div>
+
+      <div className="export-settings">
+        <label>
+          Format
+          <select value={format} onChange={(event) => setFormat(event.target.value)}>
+            {EXPORT_FORMATS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Correction stage
+          <select value={stage} onChange={(event) => setStage(event.target.value)}>
+            <option value="raw">Raw source</option>
+            <option value="field_submitted">Field submitted</option>
+            <option value="central_corrected">Central corrected draft</option>
+            <option value="approved_final">Approved final</option>
+          </select>
+        </label>
+        <div className="export-depth-range">
+          <label>
+            From
+            <input value={fromDepth} onChange={(event) => setFromDepth(event.target.value)} />
+          </label>
+          <label>
+            To
+            <input value={toDepth} onChange={(event) => setToDepth(event.target.value)} />
+          </label>
+        </div>
+        <div className="export-section-grid">
+          {(Object.keys(sections) as Array<keyof typeof sections>).map((key) => (
+            <label key={key}>
+              <input type="checkbox" checked={sections[key]} onChange={() => toggleSection(key)} />
+              {key.toUpperCase()}
+            </label>
+          ))}
+        </div>
+        <small>
+          Preview: {stage.replaceAll("_", " ")} · {fromDepth || 0}-{toDepth || data.total_depth}m ·{" "}
+          {selectedCurveKeys.length} curve(s)
+        </small>
       </div>
 
       <div className="export-checks">
@@ -34,22 +107,9 @@ export function ExportPanel({ readiness, jobs, creating, approving, onCreate, on
         <button
           type="button"
           disabled={creating}
-          onClick={() => onCreate("corrected_lithology_csv")}
+          onClick={() => onCreate(exportType)}
         >
-          Log CSV
-        </button>
-        <button
-          type="button"
-          disabled={creating}
-          onClick={() => onCreate("corrected_lithology_xlsx")}
-        >
-          Log Excel
-        </button>
-        <button type="button" disabled={creating} onClick={() => onCreate("curves_csv")}>
-          Curve CSV
-        </button>
-        <button type="button" disabled={creating} onClick={() => onCreate("curves_las")}>
-          Curve LAS
+          {creating ? "Generating..." : "Generate configured export"}
         </button>
       </div>
 

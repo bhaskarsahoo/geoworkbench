@@ -50,6 +50,8 @@ class LithologyIntervalPatch(BaseModel):
     recovery: float | None = None
     recovery_percent: float | None = None
     rqd: float | None = None
+    logged_color: str | None = None
+    structural_features: str | None = None
 
 
 class SeamIntervalOut(BaseModel):
@@ -90,6 +92,9 @@ class CoreImageOut(BaseModel):
     from_depth: float | None
     to_depth: float | None
     url: str
+    original_url: str
+    strip_url: str | None
+    strip_metadata: dict | None = None
 
 
 class DisplayLayoutOut(BaseModel):

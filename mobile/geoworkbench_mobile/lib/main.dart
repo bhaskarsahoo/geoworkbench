@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'api_client.dart';
 
@@ -32,7 +33,7 @@ class FieldSyncScreen extends StatefulWidget {
 }
 
 class _FieldSyncScreenState extends State<FieldSyncScreen> {
-  final _baseUrl = TextEditingController(text: 'http://192.168.1.3:8081');
+  final _baseUrl = TextEditingController(text: 'http://10.0.2.2:8081');
   final _newCode = TextEditingController(text: 'CTSJ-30-P-02-ANDROID-DEMO');
   final _projectCode = TextEditingController(text: 'DEMO-COAL');
   final _projectName = TextEditingController(text: 'Demo Coal Block');
@@ -57,6 +58,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
   final _seamName = TextEditingController(text: 'LOCAL');
   final _remarks = TextEditingController(text: 'Android demo interval from field app');
   String _fileType = 'excel';
+  String _cameraType = 'corebox_image';
   int _sourceBoreholeId = 6;
   int? _createdBoreholeId;
   String _status = 'Ready';
@@ -65,6 +67,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
   bool _busy = false;
 
   GeoWorkbenchApi get _api => GeoWorkbenchApi(_baseUrl.text.trim());
+  final _imagePicker = ImagePicker();
 
   bool get _canSyncInterval =>
       !_busy &&
@@ -158,6 +161,31 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
         boreholeId: _createdBoreholeId!,
         fileType: _fileType,
         filePath: path,
+      ),
+    );
+  }
+
+  Future<void> _captureAndUpload() async {
+    if (_createdBoreholeId == null) {
+      setState(() => _status = 'Create a mobile demo borehole first.');
+      return;
+    }
+    setState(() => _status = 'Opening camera...');
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 82,
+      maxWidth: 1800,
+    );
+    if (image == null) {
+      setState(() => _status = 'Camera cancelled.');
+      return;
+    }
+    await _run(
+      'Uploading captured ${_cameraType.replaceAll('_', ' ')}',
+      () => _api.uploadSourceFile(
+        boreholeId: _createdBoreholeId!,
+        fileType: _cameraType,
+        filePath: image.path,
       ),
     );
   }
@@ -474,6 +502,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
                 items: const [
                   DropdownMenuItem(value: 'excel', child: Text('Excel workbook')),
                   DropdownMenuItem(value: 'las', child: Text('Geophysical LAS')),
+                  DropdownMenuItem(value: 'geophysical_pdf', child: Text('Geophysical PDF')),
                   DropdownMenuItem(value: 'corebox_image', child: Text('Corebox image')),
                   DropdownMenuItem(value: 'site_photo', child: Text('Site photo')),
                 ],
@@ -485,6 +514,22 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
                 label: Text(_busy && _busyLabel.startsWith('Uploading')
                     ? 'Uploading...'
                     : 'Upload File'),
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: _cameraType,
+                decoration: const InputDecoration(labelText: 'Camera capture type'),
+                items: const [
+                  DropdownMenuItem(value: 'corebox_image', child: Text('Corebox image')),
+                  DropdownMenuItem(value: 'site_photo', child: Text('Site photo')),
+                ],
+                onChanged: (value) => setState(() => _cameraType = value ?? 'corebox_image'),
+              ),
+              FilledButton.icon(
+                onPressed: _busy || _createdBoreholeId == null ? null : _captureAndUpload,
+                icon: const Icon(Icons.photo_camera),
+                label: Text(_busy && _busyLabel.startsWith('Uploading captured')
+                    ? 'Uploading photo...'
+                    : 'Capture & Upload Photo'),
               ),
             ],
           ),

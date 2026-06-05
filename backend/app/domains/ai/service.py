@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.db.models import AiSuggestion, Borehole, CorrectionAudit, LithologyInterval, ValidationIssue
+from app.db.models import AiSuggestion, Borehole, CoreImage, CorrectionAudit, Curve, LithologyInterval, ValidationIssue
 from app.services.ai_provider import AiProviderUnavailable, ai_provider_status, local_chat_completion
 from app.services.validation.borehole_validation import replace_validation_issues, validate_borehole
 
@@ -16,7 +16,8 @@ def _load_borehole(db: Session, borehole_id: int) -> Borehole:
         .options(
             selectinload(Borehole.lithology_intervals),
             selectinload(Borehole.seam_intervals),
-            selectinload(Borehole.curves),
+            selectinload(Borehole.curves).selectinload(Curve.samples),
+            selectinload(Borehole.core_images),
             selectinload(Borehole.validation_issues),
             selectinload(Borehole.ai_suggestions),
         )
@@ -54,6 +55,8 @@ def _suggestion_for_issue(borehole: Borehole, issue: ValidationIssue) -> dict | 
     if issue.severity == "info" and issue.code not in {
         "coal_interval_without_seam",
         "curve_depth_range_mismatch",
+        "caliper_washout_warning",
+        "core_image_depth_mapping_missing",
     }:
         return None
 
@@ -129,6 +132,56 @@ def _suggestion_for_issue(borehole: Borehole, issue: ValidationIssue) -> dict | 
         confidence = 0.64
         from_depth = None
         to_depth = None
+
+    elif issue.code == "missing_recovery_data":
+        title = "Recovery data missing"
+        action = "Ask the site log or core run sheet to confirm recovery before approving this interval."
+        confidence = 0.74
+
+    elif issue.code == "missing_rqd_data":
+        title = "RQD data missing"
+        action = "Confirm whether RQD was not measured, not applicable, or omitted during field logging."
+        confidence = 0.72
+
+    elif issue.code == "curve_lithology_disagreement":
+        interval = _interval_by_id(borehole, issue.entity_id)
+        metadata = issue.issue_metadata or {}
+        interpretation = metadata.get("interpretation")
+        title = "Lithology and geophysical curves disagree"
+        if interpretation == "coal_like_curve_response":
+            action = (
+                "Review this interval as a possible coal/carbonaceous candidate. Compare core image, "
+                "remarks, gamma, resistivity, and density before changing lithology."
+            )
+            patch = {"lithology_code": "COAL", "lithology_label": "Coal"} if interval else None
+            confidence = 0.7
+        elif interpretation == "shale_like_curve_response":
+            action = (
+                "Review whether this coal interval includes shale/clay parting or whether the lithology "
+                "boundary should be adjusted."
+            )
+            confidence = 0.66
+        else:
+            action = "Compare the interval against curve response and core image before final correction."
+            confidence = 0.62
+
+    elif issue.code == "caliper_washout_warning":
+        title = "Possible washout from caliper curve"
+        action = (
+            "Treat recovery/RQD and lithology confidence cautiously in this interval. Check core condition, "
+            "remarks, and drilling notes."
+        )
+        confidence = 0.63
+
+    elif issue.code == "core_image_depth_mapping_missing":
+        title = "Core image needs depth mapping"
+        action = "Map the core image to box/run depth before relying on it as visual evidence."
+        confidence = 0.7
+
+    elif issue.code == "core_image_depth_mapping_conflict":
+        title = "Core image depth mapping conflict"
+        action = "Check the image box number and run depths; this image may be attached to the wrong depth range."
+        confidence = 0.78
 
     return {
         "validation_issue_id": issue.id,

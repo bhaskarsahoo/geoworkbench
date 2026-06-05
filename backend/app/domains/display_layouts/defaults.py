@@ -19,8 +19,9 @@ def default_borehole_layout() -> dict:
                 {"widgetId": "ai-workflow", "x": 0, "y": 5, "w": 2, "h": 4},
                 {"widgetId": "log-widget", "x": 2, "y": 1, "w": 7, "h": 8},
                 {"widgetId": "interval-details", "x": 9, "y": 1, "w": 3, "h": 6},
-                {"widgetId": "export-panel", "x": 9, "y": 7, "w": 3, "h": 3},
-                {"widgetId": "data-arrival", "x": 0, "y": 9, "w": 12, "h": 3},
+                {"widgetId": "curve-catalog", "x": 9, "y": 7, "w": 3, "h": 3},
+                {"widgetId": "export-panel", "x": 9, "y": 10, "w": 3, "h": 3},
+                {"widgetId": "data-arrival", "x": 0, "y": 10, "w": 9, "h": 3},
             ],
         },
         "widgets": {
@@ -40,6 +41,11 @@ def default_borehole_layout() -> dict:
                 "title": "Depth Metadata",
                 "settings": {"editable": True},
             },
+            "curve-catalog": {
+                "type": "curveCatalog",
+                "title": "Curve Catalog",
+                "settings": {"showCoverage": True},
+            },
             "export-panel": {"type": "exportPanel", "title": "Export", "settings": {"showReadiness": True}},
             "data-arrival": {"type": "dataArrival", "title": "Data Arrival", "settings": {"allowUpload": True}},
             "log-widget": {
@@ -55,6 +61,13 @@ def default_borehole_layout() -> dict:
                         "width": 180,
                     },
                     {"id": "seam", "type": "seam", "title": "Seam", "visible": True, "width": 90},
+                    {
+                        "id": "core-images",
+                        "type": "images",
+                        "title": "Core Images",
+                        "visible": True,
+                        "width": 120,
+                    },
                     {
                         "id": "recovery",
                         "type": "quantitativeBar",

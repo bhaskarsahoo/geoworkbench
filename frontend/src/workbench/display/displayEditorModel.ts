@@ -61,6 +61,13 @@ export const WIDGET_CATALOG: WidgetCatalogItem[] = [
     create: () => ({ type: "exportPanel", title: "Export", settings: { showReadiness: true } }),
   },
   {
+    type: "curveCatalog",
+    label: "Curve Catalog",
+    icon: "CV",
+    description: "Curve metadata, coverage, units, and display settings summary.",
+    create: () => ({ type: "curveCatalog", title: "Curve Catalog", settings: { showCoverage: true } }),
+  },
+  {
     type: "validationPanel",
     label: "Validation",
     icon: "VA",
@@ -236,6 +243,7 @@ export function defaultRuntimeWidgets(availableCurves: Curve[]): Record<string, 
     "ai-workflow": createCatalogWidget("aiWorkflow", availableCurves),
     "log-widget": createCatalogWidget("logWidget", availableCurves),
     "interval-details": createCatalogWidget("intervalDetails", availableCurves),
+    "curve-catalog": createCatalogWidget("curveCatalog", availableCurves),
     "export-panel": createCatalogWidget("exportPanel", availableCurves),
     "data-arrival": createCatalogWidget("dataArrival", availableCurves),
   };
@@ -251,8 +259,9 @@ export function defaultRuntimeGridItems(): DisplayGridItem[] {
     { widgetId: "ai-workflow", x: 0, y: 5, w: 2, h: 4 },
     { widgetId: "log-widget", x: 2, y: 1, w: 7, h: 8 },
     { widgetId: "interval-details", x: 9, y: 1, w: 3, h: 6 },
-    { widgetId: "export-panel", x: 9, y: 7, w: 3, h: 3 },
-    { widgetId: "data-arrival", x: 0, y: 9, w: 12, h: 3 },
+    { widgetId: "curve-catalog", x: 9, y: 7, w: 3, h: 3 },
+    { widgetId: "export-panel", x: 9, y: 10, w: 3, h: 3 },
+    { widgetId: "data-arrival", x: 0, y: 10, w: 9, h: 3 },
   ];
 }
 

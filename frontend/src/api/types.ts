@@ -67,6 +67,9 @@ export type CoreImage = {
   from_depth: number | null;
   to_depth: number | null;
   url: string;
+  original_url: string;
+  strip_url: string | null;
+  strip_metadata?: Record<string, unknown> | null;
 };
 
 export type DisplayLayout = {

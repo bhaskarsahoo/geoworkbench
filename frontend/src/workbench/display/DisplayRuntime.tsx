@@ -125,6 +125,7 @@ function renderWidget(widgetId: string, widget: NonNullable<DisplayLayout["setti
     return (
       <RuntimeWidgetFrame title={widget.title}>
         <ExportPanel
+          data={props.data}
           readiness={props.exportReadiness}
           jobs={props.exportJobs}
           creating={props.exportCreating}
@@ -135,6 +136,9 @@ function renderWidget(widgetId: string, widget: NonNullable<DisplayLayout["setti
       </RuntimeWidgetFrame>
     );
   }
+  if (widget.type === "curveCatalog") {
+    return <CurveCatalogWidget title={widget.title} data={props.data} />;
+  }
   if (widget.type === "dataArrival") {
     return <DataArrivalWidget title={widget.title} {...props} />;
   }
@@ -144,6 +148,44 @@ function renderWidget(widgetId: string, widget: NonNullable<DisplayLayout["setti
   return (
     <RuntimeWidgetFrame title={widget.title}>
       <div className="empty">No runtime renderer is registered for {widget.type}.</div>
+    </RuntimeWidgetFrame>
+  );
+}
+
+function CurveCatalogWidget({ title, data }: { title: string; data: BoreholeWorkbench }) {
+  return (
+    <RuntimeWidgetFrame title={title}>
+      <div className="curve-catalog">
+        {data.curves.map((curve) => {
+          const depths = curve.samples.map((sample) => sample.depth);
+          const values = curve.samples.map((sample) => sample.value);
+          const fromDepth = depths.length ? Math.min(...depths) : null;
+          const toDepth = depths.length ? Math.max(...depths) : null;
+          const min = values.length ? Math.min(...values) : null;
+          const max = values.length ? Math.max(...values) : null;
+          return (
+            <article key={curve.id} className="curve-catalog-item">
+              <i style={{ background: curve.color }} />
+              <div>
+                <strong>{curve.label}</strong>
+                <span>
+                  {curve.unit || "-"} · {curve.source_type.replaceAll("_", " ")}
+                </span>
+                <small>
+                  {fromDepth !== null && toDepth !== null
+                    ? `${fromDepth.toFixed(1)}-${toDepth.toFixed(1)}m`
+                    : "no coverage"}{" "}
+                  · {curve.samples.length} samples
+                </small>
+              </div>
+              <b>
+                {min !== null && max !== null ? `${min.toFixed(1)} / ${max.toFixed(1)}` : "-"}
+              </b>
+            </article>
+          );
+        })}
+        {!data.curves.length && <div className="empty">No curves imported for this borehole.</div>}
+      </div>
     </RuntimeWidgetFrame>
   );
 }
@@ -371,24 +413,65 @@ function IntervalDetailsWidget({ title, ...props }: Props & { title: string }) {
               event.preventDefault();
               const form = new FormData(event.currentTarget);
               props.onSaveInterval({
+                from_depth: parseOptionalNumber(form.get("from_depth")),
+                to_depth: parseOptionalNumber(form.get("to_depth")),
                 lithology_code: String(form.get("lithology_code")),
                 lithology_label: String(form.get("lithology_label")),
+                logged_color: String(form.get("logged_color") || ""),
                 seam_name: String(form.get("seam_name") || ""),
+                recovery: parseOptionalNumber(form.get("recovery")),
+                recovery_percent: parseOptionalNumber(form.get("recovery_percent")),
+                rqd: parseOptionalPercent(form.get("rqd_percent")),
+                structural_features: String(form.get("structural_features") || ""),
                 remark: String(form.get("remark") || ""),
               });
             }}
           >
+            <div className="edit-form-grid">
+              <label>
+                From depth
+                <input name="from_depth" defaultValue={interval.from_depth} inputMode="decimal" />
+              </label>
+              <label>
+                To depth
+                <input name="to_depth" defaultValue={interval.to_depth} inputMode="decimal" />
+              </label>
+              <label>
+                Lithology code
+                <input name="lithology_code" defaultValue={interval.lithology_code ?? ""} />
+              </label>
+              <label>
+                Lithology label
+                <input name="lithology_label" defaultValue={interval.lithology_label} />
+              </label>
+              <label>
+                Logged color
+                <input name="logged_color" defaultValue={interval.logged_color ?? ""} />
+              </label>
+              <label>
+                Seam
+                <input name="seam_name" defaultValue={interval.seam_name ?? ""} />
+              </label>
+              <label>
+                Recovery m
+                <input name="recovery" defaultValue={interval.recovery ?? ""} inputMode="decimal" />
+              </label>
+              <label>
+                Recovery %
+                <input name="recovery_percent" defaultValue={interval.recovery_percent ?? ""} inputMode="decimal" />
+              </label>
+              <label>
+                RQD %
+                <input
+                  name="rqd_percent"
+                  defaultValue={interval.rqd !== null ? Math.round(interval.rqd * 100) : ""}
+                  inputMode="decimal"
+                />
+              </label>
+            </div>
             <label>
-              Lithology code
-              <input name="lithology_code" defaultValue={interval.lithology_code ?? ""} />
-            </label>
-            <label>
-              Lithology label
-              <input name="lithology_label" defaultValue={interval.lithology_label} />
-            </label>
-            <label>
-              Seam
-              <input name="seam_name" defaultValue={interval.seam_name ?? ""} />
+              Structural features
+              <textarea name="structural_features" defaultValue={interval.structural_features ?? ""} />
             </label>
             <label>
               Remarks
@@ -402,6 +485,18 @@ function IntervalDetailsWidget({ title, ...props }: Props & { title: string }) {
       )}
     </RuntimeWidgetFrame>
   );
+}
+
+function parseOptionalNumber(value: FormDataEntryValue | null): number | undefined {
+  const text = String(value ?? "").trim();
+  if (!text) return undefined;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseOptionalPercent(value: FormDataEntryValue | null): number | undefined {
+  const parsed = parseOptionalNumber(value);
+  return parsed === undefined ? undefined : parsed / 100;
 }
 
 function buildBoreholeMetadata(data: BoreholeWorkbench) {

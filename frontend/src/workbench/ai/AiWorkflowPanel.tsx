@@ -17,6 +17,21 @@ function confidenceLabel(value: number | null) {
   return `${Math.round(value * 100)}%`;
 }
 
+function evidenceSummary(evidence: AiSuggestion["evidence"]) {
+  if (!evidence) return [];
+  const metadata = evidence.metadata;
+  const rows: string[] = [];
+  if (typeof evidence.validation_code === "string") rows.push(`rule: ${evidence.validation_code}`);
+  if (Array.isArray(evidence.curves)) rows.push(`curves: ${evidence.curves.length}`);
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    for (const [key, value] of Object.entries(metadata).slice(0, 4)) {
+      if (value === null || value === undefined || typeof value === "object") continue;
+      rows.push(`${key}: ${String(value)}`);
+    }
+  }
+  return rows;
+}
+
 export function AiWorkflowPanel({
   summary,
   provider,
@@ -69,6 +84,14 @@ export function AiWorkflowPanel({
               {suggestion.from_depth !== null ? `${suggestion.from_depth.toFixed(2)}m` : "whole borehole"} ·{" "}
               {suggestion.provider} · {suggestion.status}
             </small>
+            {suggestion.rationale && <p className="ai-rationale">{suggestion.rationale}</p>}
+            {evidenceSummary(suggestion.evidence).length > 0 && (
+              <div className="ai-evidence">
+                {evidenceSummary(suggestion.evidence).map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+              </div>
+            )}
             {suggestion.patch && (
               <code>{Object.entries(suggestion.patch).map(([key, value]) => `${key}: ${value}`).join(", ")}</code>
             )}

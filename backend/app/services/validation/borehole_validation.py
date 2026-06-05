@@ -28,6 +28,10 @@ def validate_borehole(borehole: Borehole) -> list[ValidationFinding]:
     findings.extend(validate_seam_labels(intervals))
     findings.extend(validate_curve_ranges(borehole, borehole.curves))
     findings.extend(validate_core_image_links(intervals))
+    findings.extend(validate_required_interval_metrics(intervals))
+    findings.extend(validate_curve_lithology_alignment(borehole, intervals, borehole.curves))
+    findings.extend(validate_caliper_washout(borehole, borehole.curves))
+    findings.extend(validate_core_image_depth_mapping(borehole))
     return findings
 
 
@@ -237,6 +241,195 @@ def validate_core_image_links(intervals: list[LithologyInterval]) -> list[Valida
                     to_depth=interval.to_depth,
                     entity_type="lithology_interval",
                     entity_id=interval.id,
+                )
+            )
+    return findings
+
+
+def validate_required_interval_metrics(intervals: list[LithologyInterval]) -> list[ValidationFinding]:
+    findings: list[ValidationFinding] = []
+    for interval in intervals:
+        if interval.recovery is None or interval.recovery_percent is None:
+            findings.append(
+                ValidationFinding(
+                    code="missing_recovery_data",
+                    severity="warning",
+                    message=f"Recovery values are missing for {interval.id}.",
+                    from_depth=interval.from_depth,
+                    to_depth=interval.to_depth,
+                    entity_type="lithology_interval",
+                    entity_id=interval.id,
+                )
+            )
+        if interval.rqd is None:
+            findings.append(
+                ValidationFinding(
+                    code="missing_rqd_data",
+                    severity="warning",
+                    message=f"RQD value is missing for {interval.id}.",
+                    from_depth=interval.from_depth,
+                    to_depth=interval.to_depth,
+                    entity_type="lithology_interval",
+                    entity_id=interval.id,
+                )
+            )
+    return findings
+
+
+def _curve_by_keys(curves: list[Curve], keys: set[str]) -> Curve | None:
+    return next((curve for curve in curves if curve.key.lower() in keys), None)
+
+
+def _sample_average(curve: Curve | None, from_depth: float, to_depth: float) -> float | None:
+    if curve is None:
+        return None
+    values = [
+        sample.value
+        for sample in curve.samples
+        if sample.depth >= from_depth and sample.depth <= to_depth
+    ]
+    if not values:
+        return None
+    return sum(values) / len(values)
+
+
+def validate_curve_lithology_alignment(
+    borehole: Borehole, intervals: list[LithologyInterval], curves: list[Curve]
+) -> list[ValidationFinding]:
+    gamma = _curve_by_keys(curves, {"gamma", "ngam", "natural_gamma"})
+    resistivity = _curve_by_keys(curves, {"res", "resistivity", "16n", "64n", "spr"})
+    density = _curve_by_keys(curves, {"dens", "density", "lsd"})
+    if gamma is None and resistivity is None and density is None:
+        return []
+
+    findings: list[ValidationFinding] = []
+    for interval in intervals:
+        if interval.to_depth - interval.from_depth < 1:
+            continue
+        gamma_avg = _sample_average(gamma, interval.from_depth, interval.to_depth)
+        resistivity_avg = _sample_average(resistivity, interval.from_depth, interval.to_depth)
+        density_avg = _sample_average(density, interval.from_depth, interval.to_depth)
+        coal_like = (
+            (gamma_avg is not None and gamma_avg < 55)
+            and (resistivity_avg is None or resistivity_avg > 55)
+            and (density_avg is None or density_avg < 1.85)
+        )
+        shale_like = gamma_avg is not None and gamma_avg > 95 and (resistivity_avg is None or resistivity_avg < 35)
+        is_coal = (interval.lithology_code or "").upper() in COAL_CODES
+        if coal_like and not is_coal:
+            findings.append(
+                ValidationFinding(
+                    code="curve_lithology_disagreement",
+                    severity="warning",
+                    message=(
+                        f"Curve response over {interval.id} is coal-like but the interval is logged as "
+                        f"{interval.lithology_code or 'unknown'}."
+                    ),
+                    from_depth=interval.from_depth,
+                    to_depth=interval.to_depth,
+                    entity_type="lithology_interval",
+                    entity_id=interval.id,
+                    metadata={
+                        "gamma_avg": round(gamma_avg, 2) if gamma_avg is not None else None,
+                        "resistivity_avg": round(resistivity_avg, 2) if resistivity_avg is not None else None,
+                        "density_avg": round(density_avg, 3) if density_avg is not None else None,
+                        "interpretation": "coal_like_curve_response",
+                    },
+                )
+            )
+        if shale_like and is_coal:
+            findings.append(
+                ValidationFinding(
+                    code="curve_lithology_disagreement",
+                    severity="warning",
+                    message=f"Curve response over {interval.id} is shale-like but the interval is logged as coal.",
+                    from_depth=interval.from_depth,
+                    to_depth=interval.to_depth,
+                    entity_type="lithology_interval",
+                    entity_id=interval.id,
+                    metadata={
+                        "gamma_avg": round(gamma_avg, 2) if gamma_avg is not None else None,
+                        "resistivity_avg": round(resistivity_avg, 2) if resistivity_avg is not None else None,
+                        "interpretation": "shale_like_curve_response",
+                    },
+                )
+            )
+    return findings
+
+
+def validate_caliper_washout(borehole: Borehole, curves: list[Curve]) -> list[ValidationFinding]:
+    caliper = _curve_by_keys(curves, {"cal", "caliper"})
+    if caliper is None:
+        return []
+    samples = sorted(caliper.samples, key=lambda item: item.depth)
+    if not samples:
+        return []
+    findings: list[ValidationFinding] = []
+    in_zone = False
+    start_depth = 0.0
+    max_value = 0.0
+    for sample in samples:
+        if sample.value >= 150 and not in_zone:
+            in_zone = True
+            start_depth = sample.depth
+            max_value = sample.value
+        elif sample.value >= 150 and in_zone:
+            max_value = max(max_value, sample.value)
+        elif sample.value < 150 and in_zone:
+            if sample.depth - start_depth >= 4:
+                findings.append(
+                    ValidationFinding(
+                        code="caliper_washout_warning",
+                        severity="info",
+                        message=f"Caliper indicates possible washout from {start_depth:.1f}m to {sample.depth:.1f}m.",
+                        from_depth=start_depth,
+                        to_depth=sample.depth,
+                        entity_type="curve",
+                        metadata={"curve_key": caliper.key, "max_caliper": round(max_value, 2)},
+                    )
+                )
+            in_zone = False
+    if in_zone and borehole.total_depth - start_depth >= 4:
+        findings.append(
+            ValidationFinding(
+                code="caliper_washout_warning",
+                severity="info",
+                message=f"Caliper indicates possible washout from {start_depth:.1f}m to final depth.",
+                from_depth=start_depth,
+                to_depth=borehole.total_depth,
+                entity_type="curve",
+                metadata={"curve_key": caliper.key, "max_caliper": round(max_value, 2)},
+            )
+        )
+    return findings
+
+
+def validate_core_image_depth_mapping(borehole: Borehole) -> list[ValidationFinding]:
+    findings: list[ValidationFinding] = []
+    for image in borehole.core_images:
+        if image.from_depth is None or image.to_depth is None:
+            findings.append(
+                ValidationFinding(
+                    code="core_image_depth_mapping_missing",
+                    severity="info",
+                    message=f"Core image {image.name} has no depth mapping.",
+                    entity_type="core_image",
+                    entity_id=str(image.id),
+                    metadata={"box_number": image.box_number},
+                )
+            )
+            continue
+        if image.to_depth <= image.from_depth or image.from_depth < 0 or image.to_depth > borehole.total_depth + 0.01:
+            findings.append(
+                ValidationFinding(
+                    code="core_image_depth_mapping_conflict",
+                    severity="warning",
+                    message=f"Core image {image.name} has a questionable depth range.",
+                    from_depth=image.from_depth,
+                    to_depth=image.to_depth,
+                    entity_type="core_image",
+                    entity_id=str(image.id),
+                    metadata={"box_number": image.box_number},
                 )
             )
     return findings
