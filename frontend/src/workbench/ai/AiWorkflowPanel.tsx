@@ -42,7 +42,14 @@ export function AiWorkflowPanel({
   onAccept,
   onReject,
 }: Props) {
+  const selectedAiSuggestion = useWorkbenchStore((state) => state.selectedAiSuggestion);
   const openSuggestions = suggestions.filter((suggestion) => suggestion.status === "open");
+  const orderedSuggestions = selectedAiSuggestion
+    ? [
+        ...suggestions.filter((suggestion) => suggestion.id === selectedAiSuggestion.id),
+        ...suggestions.filter((suggestion) => suggestion.id !== selectedAiSuggestion.id),
+      ]
+    : suggestions;
 
   return (
     <div className="ai-panel">
@@ -65,8 +72,13 @@ export function AiWorkflowPanel({
         <span>{suggestions.filter((item) => item.status === "rejected").length} rejected</span>
       </div>
       <div className="ai-suggestion-list">
-        {suggestions.slice(0, 12).map((suggestion) => (
-          <article key={suggestion.id} className={`ai-suggestion ${suggestion.status}`}>
+        {orderedSuggestions.slice(0, 12).map((suggestion) => (
+          <article
+            key={suggestion.id}
+            className={`ai-suggestion ${suggestion.status} ${
+              selectedAiSuggestion?.id === suggestion.id ? "selected" : ""
+            }`}
+          >
             <button
               type="button"
               className="ai-suggestion-title"
@@ -74,6 +86,7 @@ export function AiWorkflowPanel({
                 if (suggestion.from_depth !== null) {
                   useWorkbenchStore.getState().setSelectedDepth(suggestion.from_depth);
                 }
+                useWorkbenchStore.getState().setSelectedAiSuggestion(suggestion);
               }}
             >
               <strong>{suggestion.title}</strong>

@@ -31,6 +31,11 @@ export function handleTrackPointerEvent(event: TrackPointerEvent, actions: Workb
       actions.setSelectedRemarkGroup(event.object);
       return;
     }
+    if (event.object.kind === "ai-suggestion-group") {
+      actions.setSelectedDepth(event.object.depth);
+      actions.setSelectedAiSuggestion(event.object.suggestions[0] ?? null);
+      return;
+    }
   }
 
   if (event.type === "contextmenu") {

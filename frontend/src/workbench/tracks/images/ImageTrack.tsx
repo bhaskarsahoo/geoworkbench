@@ -12,6 +12,7 @@ type Props = {
 };
 
 export function ImageTrack({ data, track, scale, widthStyle, onTrackEvent }: Props) {
+  const fullStripFitHeight = 140;
   const visibleImages = data.core_images.filter(
     (image) =>
       (image.to_depth ?? image.from_depth ?? 0) >= scale.fromDepth &&
@@ -45,6 +46,9 @@ export function ImageTrack({ data, track, scale, widthStyle, onTrackEvent }: Pro
       {visibleImages.map((image) => {
         const fromDepth = image.from_depth ?? 0;
         const toDepth = image.to_depth ?? fromDepth + 1;
+        const intervalHeight = Math.max(1, scale.depthToY(toDepth) - scale.depthToY(fromDepth));
+        const canShowFullStrip = intervalHeight >= fullStripFitHeight;
+        const imageClassName = canShowFullStrip ? "core-strip-img core-strip-img-full" : "core-strip-img core-strip-img-crop";
         return (
           <button
             type="button"
@@ -55,7 +59,11 @@ export function ImageTrack({ data, track, scale, widthStyle, onTrackEvent }: Pro
             title={`Open corebox ${image.box_number}`}
           >
             {image.strip_url ? (
-              <img src={image.strip_url} alt={`Depth-arranged core strip ${image.box_number}`} />
+              <img
+                className={imageClassName}
+                src={image.strip_url}
+                alt={`Depth-arranged core strip ${image.box_number}`}
+              />
             ) : (
               <CoreLaneStack imageUrl={image.url} boxNumber={image.box_number} />
             )}

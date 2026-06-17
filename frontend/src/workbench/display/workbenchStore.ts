@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { CoreImage, LithologyInterval } from "../../api/types";
+import type { AiSuggestion, CoreImage, LithologyInterval } from "../../api/types";
 import type { TrackObject } from "../core/trackObject";
 
 export type TrackContextMenu = {
@@ -17,6 +17,7 @@ export type WorkbenchActions = {
   setSelectedDepth: (depth: number | null) => void;
   setSelectedImage: (image: CoreImage | null) => void;
   setSelectedRemarkGroup: (group: Extract<TrackObject, { kind: "remark-group" }> | null) => void;
+  setSelectedAiSuggestion: (suggestion: AiSuggestion | null) => void;
   setHoveredObject: (object: TrackObject | null) => void;
   setContextMenu: (contextMenu: TrackContextMenu | null) => void;
   setTooltipsEnabled: (tooltipsEnabled: boolean) => void;
@@ -29,6 +30,7 @@ type WorkbenchState = {
   selectedDepth: number | null;
   selectedImage: CoreImage | null;
   selectedRemarkGroup: Extract<TrackObject, { kind: "remark-group" }> | null;
+  selectedAiSuggestion: AiSuggestion | null;
   depthWindow: { fromDepth: number; toDepth: number } | null;
   hoveredObject: TrackObject | null;
   contextMenu: TrackContextMenu | null;
@@ -41,6 +43,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   selectedDepth: null,
   selectedImage: null,
   selectedRemarkGroup: null,
+  selectedAiSuggestion: null,
   depthWindow: null,
   hoveredObject: null,
   contextMenu: null,
@@ -50,6 +53,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   setSelectedDepth: (selectedDepth) => set({ selectedDepth }),
   setSelectedImage: (selectedImage) => set({ selectedImage }),
   setSelectedRemarkGroup: (selectedRemarkGroup) => set({ selectedRemarkGroup }),
+  setSelectedAiSuggestion: (selectedAiSuggestion) => set({ selectedAiSuggestion }),
   setHoveredObject: (hoveredObject) => set({ hoveredObject }),
   setContextMenu: (contextMenu) => set({ contextMenu }),
   setTooltipsEnabled: (tooltipsEnabled) =>

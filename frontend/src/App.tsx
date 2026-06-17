@@ -29,13 +29,16 @@ import { CorrelationWorkspace } from "./workbench/correlation/CorrelationWorkspa
 import { DisplayEditorDialog } from "./workbench/display/DisplayEditorDialog";
 import { DisplayRuntime } from "./workbench/display/DisplayRuntime";
 import { useWorkbenchStore } from "./workbench/display/workbenchStore";
+import { ExportCenter } from "./workbench/exports/ExportCenter";
+import { ImportCenter } from "./workbench/imports/ImportCenter";
 
 export function App() {
   const queryClient = useQueryClient();
   const [boreholeId, setBoreholeId] = useState<number | null>(null);
-  const [view, setView] = useState<"landing" | "workbench" | "correlation">("landing");
+  const [view, setView] = useState<"landing" | "workbench" | "correlation" | "import" | "export">("landing");
   const [displayChoice, setDisplayChoice] = useState("saved");
   const [displayEditorOpen, setDisplayEditorOpen] = useState(false);
+  const [mainMenuOpen, setMainMenuOpen] = useState(false);
   const { selectedInterval, setSelectedInterval, selectedImage, setSelectedImage } =
     useWorkbenchStore();
   const { selectedRemarkGroup, setSelectedRemarkGroup } = useWorkbenchStore();
@@ -44,12 +47,7 @@ export function App() {
   const importProfiles = useQuery({ queryKey: ["importProfiles"], queryFn: listImportProfiles });
   const activeId = boreholeId ?? boreholes.data?.[0]?.id;
   const selectedBorehole = boreholes.data?.find((item) => item.id === activeId) ?? boreholes.data?.[0];
-  const correlationBoreholes = useMemo(() => {
-    const items = boreholes.data ?? [];
-    const synthetic = items.filter((item) => item.project_code === "DEMO-COAL-BLOCK");
-    return synthetic.length ? synthetic : items.slice(0, 5);
-  }, [boreholes.data]);
-  const correlationIds = correlationBoreholes.slice(0, 5).map((item) => item.id);
+  const correlationIds = useMemo(() => (boreholes.data ?? []).slice(0, 5).map((item) => item.id), [boreholes.data]);
   const workbench = useQuery({
     queryKey: ["workbench", activeId],
     queryFn: () => getWorkbench(activeId as number),
@@ -131,13 +129,18 @@ export function App() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workbench", activeId] }),
   });
   const registerSourceFile = useMutation({
-    mutationFn: (payload: { file_type: string; original_name: string }) =>
+    mutationFn: (payload: {
+      file_type: string;
+      original_name: string;
+      storage_path?: string;
+      file_metadata?: Record<string, unknown>;
+    }) =>
       createSourceFile({
         borehole_id: activeId ?? null,
         file_type: payload.file_type,
         original_name: payload.original_name,
-        storage_path: `registered://${payload.original_name}`,
-        file_metadata: { registration_mode: "simulated" },
+        storage_path: payload.storage_path ?? `registered://${payload.original_name}`,
+        file_metadata: payload.file_metadata ?? { registration_mode: "simulated" },
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workbench", activeId] }),
   });
@@ -201,7 +204,13 @@ export function App() {
     if (id) {
       setBoreholeId(id);
       setView("workbench");
+      setMainMenuOpen(false);
     }
+  };
+
+  const navigateTo = (nextView: typeof view) => {
+    setView(nextView);
+    setMainMenuOpen(false);
   };
 
   return (
@@ -215,19 +224,49 @@ export function App() {
           </span>
         </button>
         <div className="toolbar">
-          {view !== "landing" && (
-            <button type="button" onClick={() => setView("landing")}>
-              Boreholes
+          <div className="main-menu-wrap">
+            <button
+              type="button"
+              className={mainMenuOpen ? "active" : ""}
+              onClick={() => setMainMenuOpen((open) => !open)}
+            >
+              Menu
             </button>
-          )}
-          <button
-            type="button"
-            className={view === "correlation" ? "active" : ""}
-            onClick={() => setView("correlation")}
-            disabled={!correlationIds.length}
-          >
-            Correlation
-          </button>
+            {mainMenuOpen && (
+              <div className="main-menu" role="menu">
+                <button type="button" className={view === "landing" ? "active" : ""} onClick={() => navigateTo("landing")}>
+                  Dashboard
+                </button>
+                <button type="button" className={view === "workbench" ? "active" : ""} disabled={!activeId} onClick={() => openWorkbench()}>
+                  Workbench
+                </button>
+                <button
+                  type="button"
+                  className={view === "correlation" ? "active" : ""}
+                  onClick={() => navigateTo("correlation")}
+                  disabled={!correlationIds.length}
+                >
+                  Correlation
+                </button>
+                <button type="button" className={view === "import" ? "active" : ""} onClick={() => navigateTo("import")} disabled={!activeId}>
+                  Import Center
+                </button>
+                <button type="button" className={view === "export" ? "active" : ""} onClick={() => navigateTo("export")} disabled={!activeId}>
+                  Export Center
+                </button>
+                <button
+                  type="button"
+                  disabled={!activeId}
+                  onClick={() => {
+                    setDisplayEditorOpen(true);
+                    setMainMenuOpen(false);
+                  }}
+                >
+                  Manage Display
+                </button>
+              </div>
+            )}
+          </div>
           <select
             value={activeId ?? ""}
             onChange={(event) => {
@@ -252,16 +291,6 @@ export function App() {
           >
             Open workbench
           </button>
-          <button
-            className={displayEditorOpen ? "active" : ""}
-            onClick={() => {
-              if (activeId) setDisplayEditorOpen(true);
-            }}
-            type="button"
-            disabled={!activeId}
-          >
-            Manage display
-          </button>
         </div>
       </header>
 
@@ -270,21 +299,18 @@ export function App() {
           boreholes={boreholes.data ?? []}
           loading={boreholes.isLoading}
           activeId={selectedBorehole?.id ?? null}
-          displayChoice={displayChoice}
-          onDisplayChoice={setDisplayChoice}
           onSelect={(id) => setBoreholeId(id)}
           onOpen={(id) => openWorkbench(id)}
           onManageDisplay={(id) => {
             setBoreholeId(id);
             setDisplayEditorOpen(true);
           }}
-          onOpenCorrelation={() => setView("correlation")}
         />
       )}
 
       {view === "correlation" && (
         <CorrelationWorkspace
-          boreholes={correlationBoreholes}
+          boreholes={boreholes.data ?? []}
           initialIds={correlationIds}
           onOpenWorkbench={(id) => {
             setBoreholeId(id);
@@ -326,6 +352,8 @@ export function App() {
             registerSourceFile.mutate({
               file_type: payload.file_type,
               original_name: payload.original_name,
+              storage_path: payload.storage_path,
+              file_metadata: payload.file_metadata,
             })
           }
           onUploadSourceFile={(payload) => uploadFile.mutate(payload)}
@@ -334,6 +362,44 @@ export function App() {
           onMergeSourceFile={(sourceFileId) => mergeSourceFile.mutate(sourceFileId)}
           onSaveInterval={(patch) => saveInterval.mutate(patch)}
           onSelectImage={(image) => setSelectedImage(image)}
+        />
+      )}
+
+      {view === "import" && workbench.isLoading && <div className="empty">Loading import center...</div>}
+      {view === "import" && runtimeWorkbenchData && (
+        <ImportCenter
+          data={runtimeWorkbenchData}
+          importProfiles={importProfiles.data}
+          registering={registerSourceFile.isPending}
+          uploading={uploadFile.isPending}
+          processing={processFile.isPending}
+          importing={importBoreholeFile.isPending}
+          merging={mergeSourceFile.isPending}
+          onRegisterSourceFile={(payload) =>
+            registerSourceFile.mutate({
+              file_type: payload.file_type,
+              original_name: payload.original_name,
+            })
+          }
+          onUploadSourceFile={(payload) => uploadFile.mutate(payload)}
+          onProcessSourceFile={(sourceFileId) => processFile.mutate(sourceFileId)}
+          onImportBoreholeFile={(sourceFileId) => importBoreholeFile.mutate(sourceFileId)}
+          onMergeSourceFile={(sourceFileId) => mergeSourceFile.mutate(sourceFileId)}
+          onOpenWorkbench={() => setView("workbench")}
+        />
+      )}
+
+      {view === "export" && workbench.isLoading && <div className="empty">Loading export center...</div>}
+      {view === "export" && runtimeWorkbenchData && (
+        <ExportCenter
+          data={runtimeWorkbenchData}
+          readiness={exportReadiness.data}
+          jobs={exportJobs.data}
+          creating={createExport.isPending}
+          approving={approveExport.isPending}
+          onCreate={(exportType) => createExport.mutate(exportType)}
+          onApprove={() => approveExport.mutate()}
+          onOpenWorkbench={() => setView("workbench")}
         />
       )}
 
@@ -393,28 +459,21 @@ type LandingPageProps = {
   boreholes: BoreholeListItem[];
   loading: boolean;
   activeId: number | null;
-  displayChoice: string;
-  onDisplayChoice: (choice: string) => void;
   onSelect: (id: number) => void;
   onOpen: (id: number) => void;
   onManageDisplay: (id: number) => void;
-  onOpenCorrelation: () => void;
 };
 
 function LandingPage({
   boreholes,
   loading,
   activeId,
-  displayChoice,
-  onDisplayChoice,
   onSelect,
   onOpen,
   onManageDisplay,
-  onOpenCorrelation,
 }: LandingPageProps) {
   const active = boreholes.filter((item) => item.workflow_status !== "approved_for_export");
   const historic = boreholes.filter((item) => item.workflow_status === "approved_for_export");
-  const selected = boreholes.find((item) => item.id === activeId) ?? boreholes[0];
 
   return (
     <section className="landing-page">
@@ -437,34 +496,29 @@ function LandingPage({
           </div>
         </div>
         <div className="landing-settings">
-          <strong>Workspace Setup</strong>
-          <label>
-            Display
-            <select value={displayChoice} onChange={(event) => onDisplayChoice(event.target.value)}>
-              <option value="saved">Saved borehole display</option>
-              <option value="default">Default correction display</option>
-            </select>
-          </label>
-          <label>
-            Unit profile
-            <select defaultValue="metric">
-              <option value="metric">Metric depth, SI units</option>
-              <option value="client">Client/project default</option>
-            </select>
-          </label>
-          <label>
-            Timezone
-            <select defaultValue="project">
-              <option value="project">Project timezone</option>
-              <option value="local">Local browser timezone</option>
-            </select>
-          </label>
-          <button type="button" disabled={!selected} onClick={() => selected && onOpen(selected.id)}>
-            Open selected workbench
-          </button>
-          <button type="button" onClick={onOpenCorrelation}>
-            Open correlation display
-          </button>
+          <div className="project-default-header">
+            <strong>Project Defaults</strong>
+            <button type="button" disabled title="Settings editor planned">
+              Edit
+            </button>
+          </div>
+          <div className="project-default-row">
+            <span>Depth profile</span>
+            <b>Metric depth, SI units</b>
+          </div>
+          <div className="project-default-row">
+            <span>Timezone</span>
+            <b>Project timezone</b>
+          </div>
+          <div className="project-default-row">
+            <span>Review mode</span>
+            <b>Central correction</b>
+          </div>
+          <div className="project-default-row">
+            <span>Display source</span>
+            <b>Top bar selection</b>
+          </div>
+          <small>Defaults can later be managed per project, site, or user role.</small>
         </div>
       </div>
 
@@ -474,6 +528,7 @@ function LandingPage({
           <BoreholeGroup
             title="Active Boreholes"
             boreholes={active}
+            pageSize={3}
             activeId={activeId}
             onSelect={onSelect}
             onOpen={onOpen}
@@ -482,6 +537,7 @@ function LandingPage({
           <BoreholeGroup
             title="Historic Boreholes"
             boreholes={historic}
+            pageSize={4}
             activeId={activeId}
             onSelect={onSelect}
             onOpen={onOpen}
@@ -509,6 +565,7 @@ function WorkflowArrow() {
 function BoreholeGroup({
   title,
   boreholes,
+  pageSize,
   activeId,
   onSelect,
   onOpen,
@@ -516,19 +573,44 @@ function BoreholeGroup({
 }: {
   title: string;
   boreholes: BoreholeListItem[];
+  pageSize: number;
   activeId: number | null;
   onSelect: (id: number) => void;
   onOpen: (id: number) => void;
   onManageDisplay: (id: number) => void;
 }) {
+  const [page, setPage] = useState(0);
+  const pageCount = Math.max(1, Math.ceil(boreholes.length / pageSize));
+  const safePage = Math.min(page, pageCount - 1);
+  const visibleBoreholes = boreholes.slice(safePage * pageSize, safePage * pageSize + pageSize);
+
   return (
     <section className="borehole-group">
       <div className="borehole-group-header">
         <h2>{title}</h2>
-        <span>{boreholes.length} boreholes</span>
+        <div className="borehole-group-tools">
+          <span>
+            {boreholes.length} boreholes
+            {pageCount > 1 ? ` · page ${safePage + 1}/${pageCount}` : ""}
+          </span>
+          {pageCount > 1 && (
+            <span className="pager-buttons">
+              <button type="button" disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>
+                Prev
+              </button>
+              <button
+                type="button"
+                disabled={safePage >= pageCount - 1}
+                onClick={() => setPage(safePage + 1)}
+              >
+                Next
+              </button>
+            </span>
+          )}
+        </div>
       </div>
       <div className="borehole-card-grid">
-        {boreholes.map((item) => (
+        {visibleBoreholes.map((item) => (
           <article
             key={item.id}
             className={`borehole-card ${item.id === activeId ? "selected" : ""}`}
@@ -561,7 +643,7 @@ function BoreholeGroup({
                     onManageDisplay(item.id);
                   }}
                 >
-                  Display
+                  Manage Display
                 </button>
               </span>
             </footer>

@@ -29,6 +29,12 @@ class MobileLithologyInterval(BaseModel):
     remark: str | None = None
 
 
+class MobileRuntimeParameter(BaseModel):
+    name: str
+    value: str
+    unit: str | None = None
+
+
 class MobileFieldSubmissionCreate(BaseModel):
     borehole_id: int
     submission_type: str = "mobile_form"
@@ -36,6 +42,7 @@ class MobileFieldSubmissionCreate(BaseModel):
     status: str = "synced"
     current_depth: float | None = None
     lithology_intervals: list[MobileLithologyInterval] = Field(default_factory=list)
+    runtime_parameters: list[MobileRuntimeParameter] = Field(default_factory=list)
     remarks: str | None = None
     payload: dict | None = None
     apply_to_log: bool = True

@@ -44,7 +44,12 @@ type Props = {
   onRejectSuggestion: (suggestionId: number) => void;
   onCreateExport: (exportType: string) => void;
   onApproveExport: () => void;
-  onRegisterSourceFile: (payload: { file_type: string; original_name: string }) => void;
+  onRegisterSourceFile: (payload: {
+    file_type: string;
+    original_name: string;
+    storage_path?: string;
+    file_metadata?: Record<string, unknown>;
+  }) => void;
   onUploadSourceFile: (payload: { file_type: string; file: File }) => void;
   onProcessSourceFile: (sourceFileId: number) => void;
   onImportBoreholeFile: (sourceFileId: number) => void;

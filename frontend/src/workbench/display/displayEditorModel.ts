@@ -106,6 +106,17 @@ export const TRACK_CATALOG: TrackCatalogItem[] = [
     create: () => ({ id: "seam", type: "seam", title: "Seam", visible: true, width: 90 }),
   },
   {
+    id: "core-images",
+    label: "Core Images",
+    create: () => ({
+      id: "core-images",
+      type: "images",
+      title: "Core Images",
+      visible: true,
+      width: 170,
+    }),
+  },
+  {
     id: "recovery",
     label: "Recovery",
     create: () => ({
@@ -193,7 +204,7 @@ export function normalizeDisplayLayout(layout: DisplayLayout, availableCurves: C
   draft.settings.widgets["log-widget"].tracks = syncTrackCurves(
     draft.settings.widgets["log-widget"].tracks,
     availableCurves,
-  );
+  ).map((track) => (track.type === "images" ? { ...track, width: Math.max(track.width, 150) } : track));
   draft.settings.regions = draft.settings.regions ?? {
     left: ["validation-panel", "ai-workflow"],
     center: ["log-widget"],

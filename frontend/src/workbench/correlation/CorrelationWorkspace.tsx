@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 
 import { getWorkbench } from "../../api/client";
@@ -12,6 +12,7 @@ type Props = {
 };
 
 type AlignMode = "depth" | "rl";
+type CorrelationDatasetMode = "synthetic" | "received" | "custom";
 
 type BoreholeMeta = {
   rl: number;
@@ -20,9 +21,42 @@ type BoreholeMeta = {
   waterLevel: number | null;
 };
 
+type CorrelationInsight = {
+  id: string;
+  severity: "review" | "watch" | "good";
+  title: string;
+  detail: string;
+  evidence: string;
+};
+
+type SeamCorrelationRow = {
+  seamName: string;
+  presentCount: number;
+  missingCount: number;
+  minTop: number;
+  maxTop: number;
+  minThickness: number;
+  maxThickness: number;
+  items: Array<{ borehole: string; top: number; bottom: number; thickness: number }>;
+};
+
 export function CorrelationWorkspace({ boreholes, initialIds, onOpenWorkbench }: Props) {
-  const [selectedIds, setSelectedIds] = useState<number[]>(initialIds);
+  const syntheticIds = useMemo(
+    () => boreholes.filter((item) => item.project_code === "DEMO-COAL-BLOCK").slice(0, 5).map((item) => item.id),
+    [boreholes],
+  );
+  const receivedIds = useMemo(
+    () => boreholes.filter((item) => item.project_code !== "DEMO-COAL-BLOCK").slice(0, 6).map((item) => item.id),
+    [boreholes],
+  );
+  const defaultIds = syntheticIds.length ? syntheticIds : initialIds;
+  const [datasetMode, setDatasetMode] = useState<CorrelationDatasetMode>(syntheticIds.length ? "synthetic" : "received");
+  const [selectedIds, setSelectedIds] = useState<number[]>(defaultIds);
+  const [selectorOpen, setSelectorOpen] = useState(false);
   const [alignMode, setAlignMode] = useState<AlignMode>("depth");
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [reviewedInsightIds, setReviewedInsightIds] = useState<Set<string>>(() => new Set());
+  const [savedNotes, setSavedNotes] = useState<Array<{ id: string; text: string }>>([]);
   const queries = useQueries({
     queries: selectedIds.map((id) => ({
       queryKey: ["workbench", id],
@@ -34,59 +68,132 @@ export function CorrelationWorkspace({ boreholes, initialIds, onOpenWorkbench }:
     .map((query) => query.data)
     .filter((item): item is BoreholeWorkbench => Boolean(item));
   const domain = useMemo(() => correlationDomain(loaded, alignMode), [loaded, alignMode]);
+  const seamRows = useMemo(() => seamCorrelationRows(loaded), [loaded]);
+  const insights = useMemo(() => buildCorrelationInsights(loaded, seamRows), [loaded, seamRows]);
+
+  useEffect(() => {
+    if (selectedIds.length || !boreholes.length) return;
+    if (datasetMode === "synthetic" && syntheticIds.length) setSelectedIds(syntheticIds);
+    else if (datasetMode === "received" && receivedIds.length) setSelectedIds(receivedIds);
+    else if (initialIds.length) setSelectedIds(initialIds);
+  }, [boreholes.length, datasetMode, initialIds, receivedIds, selectedIds.length, syntheticIds]);
 
   const toggleBorehole = (id: number) => {
+    setDatasetMode("custom");
     setSelectedIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id].slice(-7),
     );
   };
+  const applyPreset = (mode: CorrelationDatasetMode) => {
+    setDatasetMode(mode);
+    if (mode === "synthetic") setSelectedIds(syntheticIds.length ? syntheticIds : initialIds);
+    if (mode === "received") setSelectedIds(receivedIds.length ? receivedIds : initialIds);
+    if (mode !== "custom") setSelectorOpen(false);
+  };
+  const selectedBoreholes = boreholes.filter((item) => selectedIds.includes(item.id));
 
   return (
     <section className="correlation-workspace">
       <div className="correlation-toolbar">
         <div>
           <h1>Correlation Display</h1>
-          <p>Side-by-side synthetic boreholes with seam markers, lithology, and gamma response.</p>
+          <p>Compare selected boreholes by lithology, seam markers, and normalized Natural Gamma response.</p>
         </div>
-        <div className="segmented-control">
-          <button
-            type="button"
-            className={alignMode === "depth" ? "active" : ""}
-            onClick={() => setAlignMode("depth")}
-          >
-            Depth
+        <div className="correlation-toolbar-actions">
+          <button type="button" onClick={() => setInsightsOpen(true)}>
+            AI insights
           </button>
-          <button
-            type="button"
-            className={alignMode === "rl" ? "active" : ""}
-            onClick={() => setAlignMode("rl")}
-          >
-            RL
-          </button>
+          <div className="segmented-control">
+            <button
+              type="button"
+              className={alignMode === "depth" ? "active" : ""}
+              onClick={() => setAlignMode("depth")}
+            >
+              Depth
+            </button>
+            <button
+              type="button"
+              className={alignMode === "rl" ? "active" : ""}
+              onClick={() => setAlignMode("rl")}
+            >
+              RL
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="correlation-selector">
-        {boreholes.map((item) => (
-          <label key={item.id} className={selectedIds.includes(item.id) ? "selected" : ""}>
-            <input
-              type="checkbox"
-              checked={selectedIds.includes(item.id)}
-              onChange={() => toggleBorehole(item.id)}
-            />
-            <span>{item.code}</span>
-          </label>
-        ))}
+      <div className="correlation-help-strip">
+        <span>
+          <b>Depth</b> aligns each borehole from collar depth 0m.
+        </span>
+        <span>
+          <b>RL</b> aligns by elevation datum: collar RL minus downhole depth.
+        </span>
+        <span>
+          <i className="gamma-swatch" /> Red curve is normalized Natural Gamma for visual comparison.
+        </span>
+      </div>
+
+      <div className="correlation-selector compact">
+        <div className="correlation-preset-controls">
+          <button
+            type="button"
+            className={datasetMode === "synthetic" ? "active" : ""}
+            disabled={!syntheticIds.length}
+            onClick={() => applyPreset("synthetic")}
+          >
+            Synthetic Coal Block
+          </button>
+          <button
+            type="button"
+            className={datasetMode === "received" ? "active" : ""}
+            disabled={!receivedIds.length}
+            onClick={() => applyPreset("received")}
+          >
+            Received Data Comparison
+          </button>
+          <button
+            type="button"
+            className={datasetMode === "custom" ? "active" : ""}
+            onClick={() => {
+              setDatasetMode("custom");
+              setSelectorOpen((open) => !open);
+            }}
+          >
+            Choose Boreholes
+          </button>
+        </div>
+        <div className="selected-correlation-summary">
+          <strong>{selectedIds.length} selected</strong>
+          <span>{selectedBoreholes.map((item) => item.code).join(", ") || "No boreholes selected"}</span>
+        </div>
+        {selectorOpen && (
+          <div className="correlation-picker-list">
+            {boreholes.map((item) => (
+              <label key={item.id} className={selectedIds.includes(item.id) ? "selected" : ""}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(item.id)}
+                  onChange={() => toggleBorehole(item.id)}
+                />
+                <span>{item.project_code} / {item.site_code} / {item.code}</span>
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="correlation-panel">
         <div className="correlation-axis">
-          {axisTicks(domain.min, domain.max).map((tick) => (
-            <span key={tick} style={{ top: `${toPercent(tick, domain)}%` }}>
-              {tick.toFixed(0)}
-              {alignMode === "rl" ? " RL" : "m"}
-            </span>
-          ))}
+          <div className="correlation-axis-header">Depth</div>
+          <div className="correlation-axis-body">
+            {axisTicks(domain.min, domain.max).map((tick) => (
+            <span key={tick} style={{ top: `${axisTickPercent(tick, domain)}%` }}>
+                {tick.toFixed(0)}
+                {alignMode === "rl" ? " RL" : "m"}
+              </span>
+            ))}
+          </div>
         </div>
         <div className="correlation-columns">
           {loaded.map((data) => (
@@ -101,7 +208,154 @@ export function CorrelationWorkspace({ boreholes, initialIds, onOpenWorkbench }:
           {!loaded.length && <div className="empty">Select boreholes to build a correlation display.</div>}
         </div>
       </div>
+      {insightsOpen && (
+        <CorrelationInsightsDialog
+          insights={insights}
+          seamRows={seamRows}
+          boreholeCount={loaded.length}
+          reviewedInsightIds={reviewedInsightIds}
+          savedNotes={savedNotes}
+          onClose={() => setInsightsOpen(false)}
+          onMarkReviewed={(insightId) =>
+            setReviewedInsightIds((current) => {
+              const next = new Set(current);
+              next.add(insightId);
+              return next;
+            })
+          }
+          onSaveNote={(text) =>
+            setSavedNotes((current) => [...current, { id: `${Date.now()}:${current.length}`, text }])
+          }
+        />
+      )}
     </section>
+  );
+}
+
+function CorrelationInsightsDialog({
+  insights,
+  seamRows,
+  boreholeCount,
+  reviewedInsightIds,
+  savedNotes,
+  onClose,
+  onMarkReviewed,
+  onSaveNote,
+}: {
+  insights: CorrelationInsight[];
+  seamRows: SeamCorrelationRow[];
+  boreholeCount: number;
+  reviewedInsightIds: Set<string>;
+  savedNotes: Array<{ id: string; text: string }>;
+  onClose: () => void;
+  onMarkReviewed: (insightId: string) => void;
+  onSaveNote: (text: string) => void;
+}) {
+  const [note, setNote] = useState("");
+  return (
+    <div className="correlation-dialog-backdrop" role="dialog" aria-modal="true">
+      <div className="correlation-dialog">
+        <header>
+          <div>
+            <strong>AI Correlation Insights</strong>
+            <span>Rule generated · ready for local model narrative</span>
+          </div>
+          <button type="button" onClick={onClose}>
+            Close
+          </button>
+        </header>
+        <div className="correlation-dialog-grid">
+          <section className="correlation-insights">
+            <div className="correlation-section-title">
+              <strong>Review Queue</strong>
+              <span>{reviewedInsightIds.size}/{insights.length} reviewed</span>
+            </div>
+            <div className="correlation-insight-list modal-list">
+              {insights.map((insight) => (
+                <article key={insight.id} className={`correlation-insight ${insight.severity}`}>
+                  <strong>{insight.title}</strong>
+                  <p>{insight.detail}</p>
+                  <small>{insight.evidence}</small>
+                  <div className="correlation-insight-actions">
+                    <button
+                      type="button"
+                      disabled={reviewedInsightIds.has(insight.id)}
+                      onClick={() => onMarkReviewed(insight.id)}
+                    >
+                      {reviewedInsightIds.has(insight.id) ? "Reviewed" : "Mark reviewed"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNote(
+                          `${insight.title}: ${insight.detail} Evidence: ${insight.evidence}`,
+                        )
+                      }
+                    >
+                      Draft note
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+          <section className="correlation-seam-table">
+            <div className="correlation-section-title">
+              <strong>Seam Continuity</strong>
+              <span>{seamRows.length} seam groups</span>
+            </div>
+            <div className="seam-table">
+              <span>Seam</span>
+              <span>Present</span>
+              <span>Top range</span>
+              <span>Thickness</span>
+              {seamRows.slice(0, 8).map((row) => (
+                <Fragment key={row.seamName}>
+                  <b>{row.seamName}</b>
+                  <span>
+                    {row.presentCount}/{boreholeCount}
+                    {row.missingCount ? " missing" : ""}
+                  </span>
+                  <span>
+                    {row.minTop.toFixed(1)}-{row.maxTop.toFixed(1)}m
+                  </span>
+                  <span>
+                    {row.minThickness.toFixed(2)}-{row.maxThickness.toFixed(2)}m
+                  </span>
+                </Fragment>
+              ))}
+              {!seamRows.length && <span className="empty-row">No seam markers found in selected boreholes.</span>}
+            </div>
+            <form
+              className="correlation-note-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const trimmed = note.trim();
+                if (!trimmed) return;
+                onSaveNote(trimmed);
+                setNote("");
+              }}
+            >
+              <label>
+                Geologist interpretation note
+                <textarea
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  placeholder="Record seam correlation decision, uncertainty, or follow-up action."
+                />
+              </label>
+              <button type="submit">Save note</button>
+            </form>
+            <div className="saved-correlation-notes">
+              {savedNotes.map((item) => (
+                <article key={item.id}>{item.text}</article>
+              ))}
+              {!savedNotes.length && <small>No saved correlation notes in this session.</small>}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -119,11 +373,15 @@ function CorrelationColumn({
   const meta = metadataFor(data);
   const gamma = data.curves.find((curve) => curve.key === "ngam" || curve.key === "gamma");
   const gammaPath = gamma ? curvePath(gamma, data, domain, alignMode, meta) : "";
+  const seamThickness = data.seam_intervals.reduce((sum, seam) => sum + Math.max(0, seam.to_depth - seam.from_depth), 0);
   return (
     <article className="correlation-column">
       <header>
         <strong>{data.code}</strong>
-        <span>RL {meta.rl.toFixed(1)}m</span>
+        <span>
+          RL {meta.rl.toFixed(1)}m · {data.seam_intervals.length} seams · {seamThickness.toFixed(1)}m coal
+        </span>
+        <small>0-{data.total_depth.toFixed(0)}m TD</small>
         <button type="button" onClick={() => onOpenWorkbench(data.id)}>
           Open
         </button>
@@ -149,6 +407,10 @@ function CorrelationColumn({
         <svg className="correlation-curve" viewBox="0 0 100 100" preserveAspectRatio="none">
           {gammaPath && <path d={gammaPath} fill="none" stroke="#ef4444" strokeWidth="1.4" />}
         </svg>
+        <div className="correlation-curve-label">
+          <i />
+          Gamma
+        </div>
         <div className="correlation-markers">
           {data.seam_intervals.map((seam) => {
             const y = depthY((seam.from_depth + seam.to_depth) / 2, data, domain, alignMode, meta);
@@ -164,9 +426,133 @@ function CorrelationColumn({
             </span>
           )}
         </div>
+        <span className="correlation-depth-bottom">{data.total_depth.toFixed(0)}m TD</span>
       </div>
     </article>
   );
+}
+
+function seamCorrelationRows(items: BoreholeWorkbench[]): SeamCorrelationRow[] {
+  const groups = new Map<string, SeamCorrelationRow["items"]>();
+  for (const data of items) {
+    for (const seam of data.seam_intervals) {
+      const name = (seam.name || "Unnamed seam").trim().toUpperCase();
+      const current = groups.get(name) ?? [];
+      current.push({
+        borehole: data.code,
+        top: seam.from_depth,
+        bottom: seam.to_depth,
+        thickness: Math.max(0, seam.to_depth - seam.from_depth),
+      });
+      groups.set(name, current);
+    }
+  }
+
+  return Array.from(groups.entries())
+    .map(([seamName, groupItems]) => {
+      const tops = groupItems.map((item) => item.top);
+      const thicknesses = groupItems.map((item) => item.thickness);
+      return {
+        seamName,
+        presentCount: groupItems.length,
+        missingCount: Math.max(0, items.length - groupItems.length),
+        minTop: Math.min(...tops),
+        maxTop: Math.max(...tops),
+        minThickness: Math.min(...thicknesses),
+        maxThickness: Math.max(...thicknesses),
+        items: groupItems,
+      };
+    })
+    .sort((a, b) => b.presentCount - a.presentCount || a.minTop - b.minTop);
+}
+
+function buildCorrelationInsights(items: BoreholeWorkbench[], seamRows: SeamCorrelationRow[]): CorrelationInsight[] {
+  if (!items.length) {
+    return [
+      {
+        id: "empty",
+        severity: "watch",
+        title: "Select boreholes for correlation",
+        detail: "Choose nearby boreholes to compare seam continuity, lithology packages, and curve response.",
+        evidence: "No boreholes selected.",
+      },
+    ];
+  }
+
+  const insights: CorrelationInsight[] = [];
+  const selectedCodes = items.map((item) => item.code).join(", ");
+  const commonSeams = seamRows.filter((row) => row.presentCount >= Math.max(2, Math.ceil(items.length * 0.6)));
+  const missingSeams = seamRows.filter((row) => row.missingCount > 0 && row.presentCount >= 2);
+  const variableSeams = seamRows.filter((row) => row.maxThickness - row.minThickness >= 1);
+  const curveCoverage = items.map((item) => ({
+    code: item.code,
+    curves: item.curves.length,
+    hasGamma: item.curves.some((curve) => ["ngam", "gamma"].includes(curve.key)),
+  }));
+  const curveGaps = curveCoverage.filter((item) => !item.hasGamma || item.curves < 2);
+
+  insights.push({
+    id: "selected",
+    severity: commonSeams.length ? "good" : "watch",
+    title: `${items.length} boreholes compared`,
+    detail:
+      commonSeams.length > 0
+        ? `${commonSeams.length} seam group(s) appear continuous enough for geologist review.`
+        : "No dominant common seam group is visible across the selected boreholes.",
+    evidence: selectedCodes,
+  });
+
+  if (missingSeams.length) {
+    const seam = missingSeams[0];
+    insights.push({
+      id: `missing:${seam.seamName}`,
+      severity: "review",
+      title: `Missing marker review: ${seam.seamName}`,
+      detail: `${seam.seamName} is present in ${seam.presentCount} borehole(s) but missing in ${seam.missingCount}. Check whether the seam pinches out, is unlogged, or needs relabelling.`,
+      evidence: seam.items.map((item) => `${item.borehole} ${item.top.toFixed(1)}-${item.bottom.toFixed(1)}m`).join(" · "),
+    });
+  }
+
+  if (variableSeams.length) {
+    const seam = variableSeams[0];
+    insights.push({
+      id: `thickness:${seam.seamName}`,
+      severity: "watch",
+      title: `Thickness variation: ${seam.seamName}`,
+      detail: `Thickness changes from ${seam.minThickness.toFixed(2)}m to ${seam.maxThickness.toFixed(2)}m. Confirm whether this is expected seam geometry or a logging/correlation issue.`,
+      evidence: seam.items.map((item) => `${item.borehole}: ${item.thickness.toFixed(2)}m`).join(" · "),
+    });
+  }
+
+  if (curveGaps.length) {
+    insights.push({
+      id: "curve-gaps",
+      severity: "review",
+      title: "Curve evidence is uneven",
+      detail: "Some selected boreholes have limited gamma/geophysical curve support, so seam correlation confidence should be treated as lower there.",
+      evidence: curveGaps.map((item) => `${item.code}: ${item.curves} curve(s)`).join(" · "),
+    });
+  }
+
+  const coalRich = items
+    .map((item) => ({
+      code: item.code,
+      coalIntervals: item.lithology_intervals.filter((interval) =>
+        `${interval.lithology_code ?? ""} ${interval.lithology_label}`.toLowerCase().includes("coal"),
+      ).length,
+    }))
+    .sort((a, b) => b.coalIntervals - a.coalIntervals);
+  if (coalRich.length >= 2 && coalRich[0].coalIntervals - coalRich.at(-1)!.coalIntervals >= 3) {
+    insights.push({
+      id: "coal-package-change",
+      severity: "watch",
+      title: "Coal package frequency changes",
+      detail: "The number of coal/carbonaceous intervals varies noticeably across the selected boreholes.",
+      evidence: coalRich.map((item) => `${item.code}: ${item.coalIntervals}`).join(" · "),
+    });
+  }
+
+  return insights.slice(0, 5);
 }
 
 function metadataFor(data: BoreholeWorkbench): BoreholeMeta {
@@ -210,6 +596,10 @@ function axisTicks(min: number, max: number): number[] {
 
 function toPercent(value: number, domain: { min: number; max: number }): number {
   return ((value - domain.min) / Math.max(1, domain.max - domain.min)) * 100;
+}
+
+function axisTickPercent(value: number, domain: { min: number; max: number }): number {
+  return toPercent(value, domain);
 }
 
 function depthValue(depth: number, data: BoreholeWorkbench, alignMode: AlignMode, meta: BoreholeMeta): number {

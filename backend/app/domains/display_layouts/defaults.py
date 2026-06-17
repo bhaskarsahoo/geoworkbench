@@ -66,7 +66,7 @@ def default_borehole_layout() -> dict:
                         "type": "images",
                         "title": "Core Images",
                         "visible": True,
-                        "width": 120,
+                        "width": 170,
                     },
                     {
                         "id": "recovery",

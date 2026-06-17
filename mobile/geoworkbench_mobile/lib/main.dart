@@ -13,12 +13,59 @@ class GeoWorkbenchMobileApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const primary = Color(0xff123f3a);
+    const accent = Color(0xffd49a2a);
+    const surface = Color(0xfff3f7f3);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'GeoWorkbench Field',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff2f7d6f)),
+        scaffoldBackgroundColor: surface,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primary,
+          primary: primary,
+          secondary: accent,
+          surface: const Color(0xffffffff),
+          tertiary: const Color(0xff2f7d6f),
+        ),
         useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: surface,
+          foregroundColor: Color(0xff10201d),
+          elevation: 0,
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: Color(0xffdce6e1)),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xfff8faf8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xffd6e1dc)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xffd6e1dc)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: primary, width: 1.5),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
       ),
       home: const FieldSyncScreen(),
     );
@@ -65,6 +112,18 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
   String _busyLabel = '';
   String _openSection = 'create-empty';
   bool _busy = false;
+  final List<_RuntimeParameterInput> _runtimeParameters = [
+    _RuntimeParameterInput(
+      name: 'Water level',
+      value: '12.5',
+      unit: 'm',
+    ),
+    _RuntimeParameterInput(
+      name: 'Drilling fluid loss',
+      value: 'Minor',
+      unit: '',
+    ),
+  ];
 
   GeoWorkbenchApi get _api => GeoWorkbenchApi(_baseUrl.text.trim());
   final _imagePicker = ImagePicker();
@@ -105,6 +164,9 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
     _coreDip.dispose();
     _seamName.dispose();
     _remarks.dispose();
+    for (final parameter in _runtimeParameters) {
+      parameter.dispose();
+    }
     super.dispose();
   }
 
@@ -210,6 +272,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
         grainSize: _grainSize.text.trim(),
         coreDip: _coreDip.text.trim(),
         remarks: _remarks.text.trim(),
+        runtimeParameters: _runtimeParameterPayload(),
       ),
     );
     if (!_status.startsWith('Exception')) {
@@ -239,6 +302,28 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
     });
   }
 
+  List<Map<String, String>> _runtimeParameterPayload() {
+    return _runtimeParameters
+        .map((parameter) => {
+              'name': parameter.name.text.trim(),
+              'value': parameter.value.text.trim(),
+              'unit': parameter.unit.text.trim(),
+            })
+        .where((parameter) =>
+            parameter['name']!.isNotEmpty || parameter['value']!.isNotEmpty)
+        .toList();
+  }
+
+  void _addRuntimeParameter() {
+    setState(() => _runtimeParameters.add(_RuntimeParameterInput()));
+  }
+
+  void _removeRuntimeParameter(int index) {
+    final parameter = _runtimeParameters.removeAt(index);
+    parameter.dispose();
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,19 +340,35 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            const Expanded(child: Text('GeoWorkbench Field Sync')),
+            const Expanded(
+              child: Text(
+                'GeoWorkbench Field Sync',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          StatusBanner(status: _status, busy: _busy, busyLabel: _busyLabel),
+          _FieldHeaderCard(
+            boreholeCode: _createdBoreholeId == null
+                ? _emptyBoreholeCode.text.trim()
+                : 'Central id $_createdBoreholeId',
+            siteCode: _siteCode.text.trim(),
+            currentDepth: _lithologyFromDepth.text.trim(),
+            busy: _busy,
+            busyLabel: _busyLabel,
+          ),
+          const SizedBox(height: 14),
           _Section(
             id: 'backend',
             openId: _openSection,
             onToggle: _toggleSection,
             title: 'Backend',
+            icon: Icons.cloud_sync,
             children: [
               TextField(
                 controller: _baseUrl,
@@ -280,6 +381,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
             openId: _openSection,
             onToggle: _toggleSection,
             title: 'Create Empty Borehole',
+            icon: Icons.add_location_alt,
             children: [
               TextField(
                 controller: _projectCode,
@@ -346,6 +448,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
             openId: _openSection,
             onToggle: _toggleSection,
             title: 'Create Demo Borehole Copy',
+            icon: Icons.copy_all,
             children: [
               DropdownButtonFormField<int>(
                 initialValue: _sourceBoreholeId,
@@ -382,6 +485,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
             openId: _openSection,
             onToggle: _toggleSection,
             title: 'Structured Field Log Entry',
+            icon: Icons.edit_note,
             children: [
               Row(
                 children: [
@@ -481,6 +585,28 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
                 minLines: 2,
                 maxLines: 3,
               ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Additional runtime parameters',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _busy ? null : _addRuntimeParameter,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add'),
+                  ),
+                ],
+              ),
+              for (final entry in _runtimeParameters.indexed)
+                _RuntimeParameterRow(
+                  key: ValueKey(entry.$2.id),
+                  parameter: entry.$2,
+                  onRemove: _busy ? null : () => _removeRuntimeParameter(entry.$1),
+                ),
               FilledButton.icon(
                 onPressed: _canSyncInterval ? _syncStructuredInterval : null,
                 icon: const Icon(Icons.upload),
@@ -495,6 +621,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
             openId: _openSection,
             onToggle: _toggleSection,
             title: 'Upload Field File',
+            icon: Icons.drive_folder_upload,
             children: [
               DropdownButtonFormField<String>(
                 initialValue: _fileType,
@@ -537,10 +664,25 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
             id: 'status',
             openId: _openSection,
             onToggle: _toggleSection,
-            title: 'Status',
+            title: 'Sync status',
+            icon: _busy ? Icons.sync : Icons.task_alt,
             children: [
-              Text(_status),
-              if (_createdBoreholeId != null) Text('Central borehole id: $_createdBoreholeId'),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_busy) ...[
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(child: Text(_status)),
+                ],
+              ),
+              if (_createdBoreholeId != null)
+                Text('Central borehole id: $_createdBoreholeId'),
             ],
           ),
         ],
@@ -550,6 +692,260 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
 
   void _toggleSection(String id) {
     setState(() => _openSection = _openSection == id ? '' : id);
+  }
+}
+
+class _RuntimeParameterInput {
+  _RuntimeParameterInput({
+    String name = '',
+    String value = '',
+    String unit = '',
+  })  : id = UniqueKey().toString(),
+        name = TextEditingController(text: name),
+        value = TextEditingController(text: value),
+        unit = TextEditingController(text: unit);
+
+  final String id;
+  final TextEditingController name;
+  final TextEditingController value;
+  final TextEditingController unit;
+
+  void dispose() {
+    name.dispose();
+    value.dispose();
+    unit.dispose();
+  }
+}
+
+class _FieldHeaderCard extends StatelessWidget {
+  const _FieldHeaderCard({
+    required this.boreholeCode,
+    required this.siteCode,
+    required this.currentDepth,
+    required this.busy,
+    required this.busyLabel,
+  });
+
+  final String boreholeCode;
+  final String siteCode;
+  final String currentDepth;
+  final bool busy;
+  final String busyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          colors: [Color(0xff123f3a), Color(0xff245f54)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xff123f3a).withValues(alpha: 0.16),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.terrain, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Field capture workspace',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: const Color(0xffbfe9dd),
+                            ),
+                      ),
+                      Text(
+                        boreholeCode.isEmpty ? 'New borehole' : boreholeCode,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _HeaderMetric(
+                    label: 'Site',
+                    value: siteCode.isEmpty ? 'Not set' : siteCode,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _HeaderMetric(
+                    label: 'Depth',
+                    value: currentDepth.isEmpty ? '-' : '$currentDepth m',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+              ),
+              child: Row(
+                children: [
+                  if (busy) ...[
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colorScheme.secondary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ] else ...[
+                    Icon(Icons.check_circle, size: 18, color: colorScheme.secondary),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      busy && busyLabel.isNotEmpty ? busyLabel : 'Ready for field sync',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderMetric extends StatelessWidget {
+  const _HeaderMetric({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: const Color(0xffbfe9dd),
+                ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RuntimeParameterRow extends StatelessWidget {
+  const _RuntimeParameterRow({
+    super.key,
+    required this.parameter,
+    required this.onRemove,
+  });
+
+  final _RuntimeParameterInput parameter;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 5,
+            child: TextField(
+              controller: parameter.name,
+              decoration: const InputDecoration(labelText: 'Parameter'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 4,
+            child: TextField(
+              controller: parameter.value,
+              decoration: const InputDecoration(labelText: 'Value'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 3,
+            child: TextField(
+              controller: parameter.unit,
+              decoration: const InputDecoration(labelText: 'Unit'),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Remove parameter',
+            onPressed: onRemove,
+            icon: const Icon(Icons.remove_circle_outline),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -601,6 +997,7 @@ class _Section extends StatelessWidget {
     required this.openId,
     required this.onToggle,
     required this.title,
+    required this.icon,
     required this.children,
   });
 
@@ -608,6 +1005,7 @@ class _Section extends StatelessWidget {
   final String openId;
   final ValueChanged<String> onToggle;
   final String title;
+  final IconData icon;
   final List<Widget> children;
 
   @override
@@ -618,7 +1016,22 @@ class _Section extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ListTile(
-            title: Text(title, style: Theme.of(context).textTheme.titleMedium),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+            leading: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+            ),
+            title: Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
             trailing: Icon(isOpen ? Icons.expand_less : Icons.expand_more),
             onTap: () => onToggle(id),
           ),

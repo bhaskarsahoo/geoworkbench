@@ -1,4 +1,4 @@
-import type { CoreImage, Curve, CurveSample, LithologyInterval, SeamInterval } from "../../api/types";
+import type { AiSuggestion, CoreImage, Curve, CurveSample, LithologyInterval, SeamInterval } from "../../api/types";
 
 export type TrackObjectKind =
   | "depth"
@@ -7,6 +7,7 @@ export type TrackObjectKind =
   | "curve-sample"
   | "core-image"
   | "remark-group"
+  | "ai-suggestion-group"
   | "empty";
 
 export type TrackObject =
@@ -50,6 +51,13 @@ export type TrackObject =
       depth: number;
       label?: string;
       remarks: Array<{ depth: number; text: string; sourceRow: number | null }>;
+    }
+  | {
+      kind: "ai-suggestion-group";
+      id: string;
+      depth: number;
+      label?: string;
+      suggestions: AiSuggestion[];
     }
   | {
       kind: "depth" | "empty";

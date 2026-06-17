@@ -70,6 +70,7 @@ class GeoWorkbenchApi {
     required String grainSize,
     required String coreDip,
     required String remarks,
+    required List<Map<String, String>> runtimeParameters,
   }) async {
     final toDepth = lithologyFromDepth + lithologyThickness;
     final response = await http.post(
@@ -88,7 +89,9 @@ class GeoWorkbenchApi {
           'lithology_thickness': lithologyThickness,
           'grain_size': grainSize,
           'core_dip': coreDip,
+          'runtime_parameters': runtimeParameters,
         },
+        'runtime_parameters': runtimeParameters,
         'apply_to_log': true,
         'lithology_intervals': [
           {

@@ -46,7 +46,7 @@ export function LogWidget({ data }: Props) {
       .filter((track) => track.type === "curve")
       .map((track) => track.curves?.filter((curve) => curve.visible).length ?? 0),
   );
-  const headerHeight = Math.max(88, 46 + maxVisibleCurves * 14);
+  const headerHeight = maxVisibleCurves > 0 ? Math.max(44, 34 + maxVisibleCurves * 13) : 38;
   const lithologyLegend = legendForIntervals(data.lithology_intervals);
   const baseHeight = Math.max(720, data.total_depth * 1.35);
   const maxZoomFactor = 48;
@@ -118,7 +118,6 @@ export function LogWidget({ data }: Props) {
             {data.source_workbook}
           </p>
         </div>
-        <span className="status-pill">Seeded demo data</span>
       </div>
       <div className="lithology-legend">
         {lithologyLegend.map((item) => (

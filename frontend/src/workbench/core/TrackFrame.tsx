@@ -60,7 +60,9 @@ export function TrackFrame({
       }}
     >
       <div className="track-title">
-        {track.title}
+        <span className="track-title-text" title={track.title}>
+          {track.title}
+        </span>
         {headerDetail}
       </div>
       <div className="track-body">{children}</div>
