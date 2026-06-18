@@ -2561,6 +2561,23 @@ h2 {
   gap: 10px;
 }
 
+.edit-form-heading {
+  display: grid;
+  gap: 3px;
+  border-top: 1px solid #26323b;
+  padding-top: 10px;
+}
+
+.edit-form-heading strong {
+  color: #eef4f7;
+  font-size: 13px;
+}
+
+.edit-form-heading span {
+  color: #9fb0bc;
+  font-size: 12px;
+}
+
 .interval-card {
   display: grid;
   gap: 4px;
@@ -2636,6 +2653,25 @@ h2 {
   font-size: 12px;
 }
 
+.interval-actions {
+  margin-bottom: 10px;
+}
+
+.interval-actions button {
+  width: 100%;
+  border: 1px solid #3d4c56;
+  border-radius: 6px;
+  background: #172028;
+  color: #f2f7fa;
+  padding: 9px 10px;
+  font-weight: 700;
+}
+
+.interval-actions button:hover {
+  border-color: #53c6b7;
+  background: #1e2a32;
+}
+
 .metadata-collapsible {
   margin-bottom: 10px;
   border: 1px solid #2e363d;
@@ -2694,6 +2730,95 @@ h2 {
 
 .edit-form-grid label:nth-child(4) {
   grid-column: span 2;
+}
+
+.floating-interval-editor {
+  position: fixed;
+  z-index: 80;
+  width: min(520px, calc(100vw - 24px));
+  max-height: calc(100vh - 96px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid #41515c;
+  border-radius: 8px;
+  background: #0c1013;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 48%);
+  overflow: hidden;
+}
+
+.floating-interval-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #28343c;
+  background: #111820;
+  padding: 10px 12px;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+}
+
+.floating-interval-editor-header div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.floating-interval-editor-header strong {
+  color: #f2f7fa;
+  font-size: 14px;
+}
+
+.floating-interval-editor-header span {
+  color: #9fb0bc;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-interval-editor-header button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #3b4852;
+  border-radius: 6px;
+  background: #151d24;
+  color: #e8f0f4;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.floating-edit-form {
+  overflow: auto;
+  padding: 12px;
+}
+
+.floating-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  position: sticky;
+  bottom: -12px;
+  margin: 4px -12px -12px;
+  border-top: 1px solid #28343c;
+  background: #0c1013;
+  padding: 10px 12px;
+}
+
+.floating-editor-actions button {
+  border: 1px solid #3b4852;
+  border-radius: 6px;
+  background: #151d24;
+  color: #e8f0f4;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.floating-editor-actions button[type="submit"] {
+  border-color: #3c8f83;
+  background: #1d6f62;
+  color: #f5fffc;
 }
 
 .image-modal {

@@ -1,5 +1,5 @@
-import type { FormEvent, ReactNode } from "react";
-import { useMemo } from "react";
+import type { FormEvent, PointerEvent, ReactNode } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import type {
   BoreholeAiSummary,
@@ -358,137 +358,223 @@ function DataArrivalWidget({ title, ...props }: Props & { title: string }) {
 
 function IntervalDetailsWidget({ title, ...props }: Props & { title: string }) {
   const interval = props.selectedInterval;
+  const selectedDepth = useWorkbenchStore((state) => state.selectedDepth);
   const boreholeMetadata = buildBoreholeMetadata(props.data);
+  const [editorOpen, setEditorOpen] = useState(false);
   return (
-    <RuntimeWidgetFrame title={title}>
-      {!interval && <div className="empty">Select an interval or curve point.</div>}
-      {interval && (
-        <>
-          <div className="interval-card">
-            <strong>
-              {interval.from_depth} m - {interval.to_depth} m
-            </strong>
-            <span>
-              {interval.lithology_code} · {interval.lithology_label}
-            </span>
-            <small>Source row {interval.source_row ?? "-"}</small>
-          </div>
-          <div className="field-grid">
-            <MetadataField label="Thickness" value={`${(interval.to_depth - interval.from_depth).toFixed(2)} m`} />
-            <MetadataField label="Logged color" value={interval.logged_color || "-"} />
-            <MetadataField label="Seam" value={interval.seam_name || "-"} />
-            <MetadataField
-              label="Recovery"
-              value={`${interval.recovery ?? "-"} m ${interval.recovery_percent ? `(${interval.recovery_percent}%)` : ""}`}
-            />
-            <MetadataField label="RQD" value={interval.rqd !== null ? `${Math.round(interval.rqd * 100)}%` : "-"} />
-            <MetadataField label="Core box" value={props.selectedCoreImage ? `Box ${props.selectedCoreImage.box_number}` : "-"} />
-            <MetadataField label="Features" value={interval.structural_features || "-"} full />
-            <MetadataField label="Remarks" value={interval.remark || "-"} full />
-            <MetadataField
-              label="Source"
-              value={`${props.data.source_workbook || "-"} · sheet ${props.data.source_sheet || "-"} · row ${interval.source_row ?? "-"}`}
-              full
-            />
-          </div>
-          {props.selectedCoreImage && (
-            <button
-              type="button"
-              className="core-preview"
-              onClick={() => props.onSelectImage(props.selectedCoreImage!)}
-            >
-              <img src={props.selectedCoreImage.url} alt={`Corebox ${props.selectedCoreImage.box_number}`} />
+    <>
+      <RuntimeWidgetFrame title={title}>
+        {!interval && <div className="empty">Select an interval or curve point.</div>}
+        {interval && (
+          <>
+            <div className="interval-card">
+              <small>
+                Ruler depth {selectedDepth !== null ? `${selectedDepth.toFixed(2)} m` : "-"} · containing interval
+              </small>
+              <strong>
+                {interval.from_depth} m - {interval.to_depth} m
+              </strong>
               <span>
-                Corebox {props.selectedCoreImage.box_number} · {props.selectedCoreImage.from_depth} m -{" "}
-                {props.selectedCoreImage.to_depth} m
+                {interval.lithology_code} · {interval.lithology_label}
               </span>
-            </button>
-          )}
-          <details className="metadata-collapsible">
-            <summary>Borehole metadata</summary>
-            <div className="field-grid metadata-grid">
-              {boreholeMetadata.map((item) => (
-                <MetadataField key={item.label} label={item.label} value={item.value} />
-              ))}
+              <small>Source row {interval.source_row ?? "-"}</small>
             </div>
-          </details>
-          <form
-            className="edit-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const form = new FormData(event.currentTarget);
-              props.onSaveInterval({
-                from_depth: parseOptionalNumber(form.get("from_depth")),
-                to_depth: parseOptionalNumber(form.get("to_depth")),
-                lithology_code: String(form.get("lithology_code")),
-                lithology_label: String(form.get("lithology_label")),
-                logged_color: String(form.get("logged_color") || ""),
-                seam_name: String(form.get("seam_name") || ""),
-                recovery: parseOptionalNumber(form.get("recovery")),
-                recovery_percent: parseOptionalNumber(form.get("recovery_percent")),
-                rqd: parseOptionalPercent(form.get("rqd_percent")),
-                structural_features: String(form.get("structural_features") || ""),
-                remark: String(form.get("remark") || ""),
-              });
-            }}
-          >
-            <div className="edit-form-grid">
-              <label>
-                From depth
-                <input name="from_depth" defaultValue={interval.from_depth} inputMode="decimal" />
-              </label>
-              <label>
-                To depth
-                <input name="to_depth" defaultValue={interval.to_depth} inputMode="decimal" />
-              </label>
-              <label>
-                Lithology code
-                <input name="lithology_code" defaultValue={interval.lithology_code ?? ""} />
-              </label>
-              <label>
-                Lithology label
-                <input name="lithology_label" defaultValue={interval.lithology_label} />
-              </label>
-              <label>
-                Logged color
-                <input name="logged_color" defaultValue={interval.logged_color ?? ""} />
-              </label>
-              <label>
-                Seam
-                <input name="seam_name" defaultValue={interval.seam_name ?? ""} />
-              </label>
-              <label>
-                Recovery m
-                <input name="recovery" defaultValue={interval.recovery ?? ""} inputMode="decimal" />
-              </label>
-              <label>
-                Recovery %
-                <input name="recovery_percent" defaultValue={interval.recovery_percent ?? ""} inputMode="decimal" />
-              </label>
-              <label>
-                RQD %
-                <input
-                  name="rqd_percent"
-                  defaultValue={interval.rqd !== null ? Math.round(interval.rqd * 100) : ""}
-                  inputMode="decimal"
-                />
-              </label>
+            <div className="field-grid">
+              <MetadataField label="Thickness" value={`${(interval.to_depth - interval.from_depth).toFixed(2)} m`} />
+              <MetadataField label="Logged color" value={interval.logged_color || "-"} />
+              <MetadataField label="Seam" value={interval.seam_name || "-"} />
+              <MetadataField
+                label="Recovery"
+                value={`${interval.recovery ?? "-"} m ${interval.recovery_percent ? `(${interval.recovery_percent}%)` : ""}`}
+              />
+              <MetadataField label="RQD" value={interval.rqd !== null ? `${Math.round(interval.rqd * 100)}%` : "-"} />
+              <MetadataField label="Core box" value={props.selectedCoreImage ? `Box ${props.selectedCoreImage.box_number}` : "-"} />
+              <MetadataField label="Features" value={interval.structural_features || "-"} full />
+              <MetadataField label="Remarks" value={interval.remark || "-"} full />
+              <MetadataField
+                label="Source"
+                value={`${props.data.source_workbook || "-"} · sheet ${props.data.source_sheet || "-"} · row ${interval.source_row ?? "-"}`}
+                full
+              />
             </div>
-            <label>
-              Structural features
-              <textarea name="structural_features" defaultValue={interval.structural_features ?? ""} />
-            </label>
-            <label>
-              Remarks
-              <textarea name="remark" defaultValue={interval.remark ?? ""} />
-            </label>
-            <button type="submit" disabled={props.intervalSaving}>
-              {props.intervalSaving ? "Saving..." : "Save correction"}
-            </button>
-          </form>
-        </>
+            {props.selectedCoreImage && (
+              <button
+                type="button"
+                className="core-preview"
+                onClick={() => props.onSelectImage(props.selectedCoreImage!)}
+              >
+                <img src={props.selectedCoreImage.url} alt={`Corebox ${props.selectedCoreImage.box_number}`} />
+                <span>
+                  Corebox {props.selectedCoreImage.box_number} · {props.selectedCoreImage.from_depth} m -{" "}
+                  {props.selectedCoreImage.to_depth} m
+                </span>
+              </button>
+            )}
+            <div className="interval-actions">
+              <button type="button" onClick={() => setEditorOpen(true)}>
+                Edit correction
+              </button>
+            </div>
+            <details className="metadata-collapsible">
+              <summary>Borehole metadata</summary>
+              <div className="field-grid metadata-grid">
+                {boreholeMetadata.map((item) => (
+                  <MetadataField key={item.label} label={item.label} value={item.value} />
+                ))}
+              </div>
+            </details>
+          </>
+        )}
+      </RuntimeWidgetFrame>
+      {interval && editorOpen && (
+        <FloatingIntervalEditor
+          interval={interval}
+          intervalSaving={props.intervalSaving}
+          onClose={() => setEditorOpen(false)}
+          onSaveInterval={(patch) => {
+            props.onSaveInterval(patch);
+            setEditorOpen(false);
+          }}
+        />
       )}
-    </RuntimeWidgetFrame>
+    </>
+  );
+}
+
+function FloatingIntervalEditor({
+  interval,
+  intervalSaving,
+  onClose,
+  onSaveInterval,
+}: {
+  interval: LithologyInterval;
+  intervalSaving: boolean;
+  onClose: () => void;
+  onSaveInterval: (patch: Partial<LithologyInterval>) => void;
+}) {
+  const [position, setPosition] = useState({ x: 520, y: 96 });
+  const dragOffset = useRef<{ x: number; y: number } | null>(null);
+
+  const startDrag = (event: PointerEvent<HTMLElement>) => {
+    dragOffset.current = {
+      x: event.clientX - position.x,
+      y: event.clientY - position.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const drag = (event: PointerEvent<HTMLElement>) => {
+    if (!dragOffset.current) return;
+    const nextX = Math.max(12, Math.min(window.innerWidth - 380, event.clientX - dragOffset.current.x));
+    const nextY = Math.max(72, Math.min(window.innerHeight - 180, event.clientY - dragOffset.current.y));
+    setPosition({ x: nextX, y: nextY });
+  };
+
+  const stopDrag = (event: PointerEvent<HTMLElement>) => {
+    dragOffset.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
+  return (
+    <aside className="floating-interval-editor" style={{ left: position.x, top: position.y }}>
+      <header
+        className="floating-interval-editor-header"
+        onPointerDown={startDrag}
+        onPointerMove={drag}
+        onPointerUp={stopDrag}
+        onPointerCancel={stopDrag}
+      >
+        <div>
+          <strong>Correction edit</strong>
+          <span>
+            {interval.from_depth} m - {interval.to_depth} m · {interval.lithology_code ?? "interval"}
+          </span>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Close correction editor">
+          x
+        </button>
+      </header>
+      <form
+        key={interval.id}
+        className="edit-form floating-edit-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = new FormData(event.currentTarget);
+          onSaveInterval({
+            from_depth: parseOptionalNumber(form.get("from_depth")),
+            to_depth: parseOptionalNumber(form.get("to_depth")),
+            lithology_code: String(form.get("lithology_code")),
+            lithology_label: String(form.get("lithology_label")),
+            logged_color: String(form.get("logged_color") || ""),
+            seam_name: String(form.get("seam_name") || ""),
+            recovery: parseOptionalNumber(form.get("recovery")),
+            recovery_percent: parseOptionalNumber(form.get("recovery_percent")),
+            rqd: parseOptionalPercent(form.get("rqd_percent")),
+            structural_features: String(form.get("structural_features") || ""),
+            remark: String(form.get("remark") || ""),
+          });
+        }}
+      >
+        <div className="edit-form-grid">
+          <label>
+            From depth
+            <input name="from_depth" defaultValue={interval.from_depth} inputMode="decimal" />
+          </label>
+          <label>
+            To depth
+            <input name="to_depth" defaultValue={interval.to_depth} inputMode="decimal" />
+          </label>
+          <label>
+            Lithology code
+            <input name="lithology_code" defaultValue={interval.lithology_code ?? ""} />
+          </label>
+          <label>
+            Lithology label
+            <input name="lithology_label" defaultValue={interval.lithology_label} />
+          </label>
+          <label>
+            Logged color
+            <input name="logged_color" defaultValue={interval.logged_color ?? ""} />
+          </label>
+          <label>
+            Seam
+            <input name="seam_name" defaultValue={interval.seam_name ?? ""} />
+          </label>
+          <label>
+            Recovery m
+            <input name="recovery" defaultValue={interval.recovery ?? ""} inputMode="decimal" />
+          </label>
+          <label>
+            Recovery %
+            <input name="recovery_percent" defaultValue={interval.recovery_percent ?? ""} inputMode="decimal" />
+          </label>
+          <label>
+            RQD %
+            <input
+              name="rqd_percent"
+              defaultValue={interval.rqd !== null ? Math.round(interval.rqd * 100) : ""}
+              inputMode="decimal"
+            />
+          </label>
+        </div>
+        <label>
+          Structural features
+          <textarea name="structural_features" defaultValue={interval.structural_features ?? ""} />
+        </label>
+        <label>
+          Remarks
+          <textarea name="remark" defaultValue={interval.remark ?? ""} />
+        </label>
+        <div className="floating-editor-actions">
+          <button type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" disabled={intervalSaving}>
+            {intervalSaving ? "Saving..." : "Save correction"}
+          </button>
+        </div>
+      </form>
+    </aside>
   );
 }
 
