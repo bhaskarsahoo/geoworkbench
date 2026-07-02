@@ -8,7 +8,9 @@ import type {
   ExportReadiness,
   ImportProfile,
   LithologyInterval,
+  Permission,
   Role,
+  RoleAccess,
   SourceFile,
   ValidationIssue,
   AiSuggestion,
@@ -71,6 +73,40 @@ export function getDiagnosticsHealth(): Promise<DiagnosticsHealth> {
 
 export function listRoles(): Promise<Role[]> {
   return request<Role[]>("/auth/roles");
+}
+
+export function createRole(payload: {
+  key: string;
+  label: string;
+  description?: string | null;
+  is_active?: number;
+}): Promise<Role> {
+  return request<Role>("/auth/roles", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateRole(roleKey: string, payload: Partial<Role>): Promise<Role> {
+  return request<Role>(`/auth/roles/${roleKey}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listPermissions(): Promise<Permission[]> {
+  return request<Permission[]>("/auth/permissions");
+}
+
+export function getRoleAccess(roleKey: string): Promise<RoleAccess> {
+  return request<RoleAccess>(`/auth/roles/${roleKey}/access`);
+}
+
+export function updateRoleAccess(roleKey: string, permissions: string[]): Promise<RoleAccess> {
+  return request<RoleAccess>(`/auth/roles/${roleKey}/access`, {
+    method: "PUT",
+    body: JSON.stringify({ permissions }),
+  });
 }
 
 export function listUsers(): Promise<User[]> {

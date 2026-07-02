@@ -15,7 +15,12 @@ from app.domains.auth.schemas import (
     LogoutOut,
     PasswordChangeRequest,
     PasswordResetRequest,
+    PermissionOut,
     RoleOut,
+    RoleAccessOut,
+    RoleAccessUpdateRequest,
+    RoleCreateRequest,
+    RoleUpdateRequest,
     SessionOut,
     TokenOut,
     UserCreateRequest,
@@ -110,8 +115,81 @@ def me(
 
 
 @router.get("/roles", response_model=list[RoleOut])
-def roles(_: object = Depends(current_user)) -> list[RoleOut]:
-    return [RoleOut(**role) for role in service.list_roles()]
+def roles(db: Session = Depends(get_db), _: object = Depends(current_user)) -> list[RoleOut]:
+    return service.list_configured_roles(db)
+
+
+@router.post("/roles", response_model=RoleOut)
+def create_role(
+    payload: RoleCreateRequest,
+    db: Session = Depends(get_db),
+    _: object = Depends(admin_user),
+) -> RoleOut:
+    try:
+        return service.create_role(
+            db,
+            key=payload.key,
+            label=payload.label,
+            description=payload.description,
+            is_active=payload.is_active,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.patch("/roles/{role_key}", response_model=RoleOut)
+def update_role(
+    role_key: str,
+    payload: RoleUpdateRequest,
+    db: Session = Depends(get_db),
+    _: object = Depends(admin_user),
+) -> RoleOut:
+    try:
+        return service.update_role(
+            db,
+            role_key=role_key,
+            label=payload.label,
+            description=payload.description,
+            is_active=payload.is_active,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/permissions", response_model=list[PermissionOut])
+def permissions(_: object = Depends(current_user)) -> list[PermissionOut]:
+    return [PermissionOut(**permission) for permission in service.permission_catalog()]
+
+
+@router.get("/roles/{role_key}/access", response_model=RoleAccessOut)
+def role_access(
+    role_key: str,
+    db: Session = Depends(get_db),
+    _: object = Depends(admin_user),
+) -> RoleAccessOut:
+    try:
+        return RoleAccessOut(
+            role_key=role_key,
+            permissions=service.get_role_permissions(db, role_key),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.put("/roles/{role_key}/access", response_model=RoleAccessOut)
+def update_role_access(
+    role_key: str,
+    payload: RoleAccessUpdateRequest,
+    db: Session = Depends(get_db),
+    _: object = Depends(admin_user),
+) -> RoleAccessOut:
+    try:
+        return RoleAccessOut(
+            role_key=role_key,
+            permissions=service.set_role_permissions(db, role_key, payload.permissions),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/users", response_model=list[UserOut])

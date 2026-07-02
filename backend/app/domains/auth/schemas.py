@@ -47,9 +47,42 @@ class PasswordResetRequest(BaseModel):
 
 
 class RoleOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    key: str
+    label: str
+    description: str | None = None
+    is_system: int = 0
+    is_active: int = 1
+
+
+class RoleCreateRequest(BaseModel):
+    key: str
+    label: str
+    description: str | None = None
+    is_active: int = 1
+
+
+class RoleUpdateRequest(BaseModel):
+    label: str | None = None
+    description: str | None = None
+    is_active: int | None = None
+
+
+class PermissionOut(BaseModel):
     key: str
     label: str
     description: str
+    category: str
+
+
+class RoleAccessOut(BaseModel):
+    role_key: str
+    permissions: list[str]
+
+
+class RoleAccessUpdateRequest(BaseModel):
+    permissions: list[str]
 
 
 class LoginRequest(BaseModel):

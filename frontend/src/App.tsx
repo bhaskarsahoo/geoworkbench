@@ -1,10 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Bell,
+  Building2,
+  Download,
+  GitCompareArrows,
+  Globe2,
+  LayoutDashboard,
+  PanelTop,
+  Settings,
+  SlidersHorizontal,
+  Upload,
+} from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import {
   approveBoreholeForExport,
   changePassword,
+  createRole,
   createSourceFile,
   createExportJob,
   createUser,
@@ -17,7 +30,9 @@ import {
   getAiProviderStatus,
   getCurrentSession,
   getDiagnosticsHealth,
+  getRoleAccess,
   importSourceFileAsBorehole,
+  listPermissions,
   listRoles,
   mergeSourceFileIntoBorehole,
   listBoreholes,
@@ -36,9 +51,11 @@ import {
   updateDisplayLayout,
   updateAiSuggestionStatus,
   updateInterval,
+  updateRole,
+  updateRoleAccess,
   updateUser,
 } from "./api/client";
-import type { AuthSession, BoreholeListItem, DisplayLayout, LithologyInterval, Role, User } from "./api/types";
+import type { AuthSession, BoreholeListItem, DisplayLayout, LithologyInterval, Permission, Role, User } from "./api/types";
 import { CorrelationWorkspace } from "./workbench/correlation/CorrelationWorkspace";
 import { DisplayEditorDialog } from "./workbench/display/DisplayEditorDialog";
 import { DisplayRuntime } from "./workbench/display/DisplayRuntime";
@@ -49,7 +66,10 @@ import { ImportCenter } from "./workbench/imports/ImportCenter";
 export function App() {
   const queryClient = useQueryClient();
   const [boreholeId, setBoreholeId] = useState<number | null>(null);
-  const [view, setView] = useState<"landing" | "workbench" | "correlation" | "import" | "export" | "users">("landing");
+  const [view, setView] = useState<"landing" | "workbench" | "correlation" | "import" | "export" | "settings">("landing");
+  const [settingsTab, setSettingsTab] = useState<"users" | "roles" | "access">("users");
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(true);
+  const [selectedAccessRole, setSelectedAccessRole] = useState("system_admin");
   const [displayChoice, setDisplayChoice] = useState("saved");
   const [displayEditorOpen, setDisplayEditorOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -59,6 +79,9 @@ export function App() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">(
     () => (window.localStorage.getItem("geoworkbench.theme") as "dark" | "light" | null) ?? "dark",
+  );
+  const [accent, setAccent] = useState<"red" | "blue" | "teal" | "violet">(
+    () => (window.localStorage.getItem("geoworkbench.accent") as "red" | "blue" | "teal" | "violet" | null) ?? "red",
   );
   const [session, setSession] = useState<AuthSession | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -70,6 +93,11 @@ export function App() {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("geoworkbench.theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.dataset.accent = accent;
+    window.localStorage.setItem("geoworkbench.accent", accent);
+  }, [accent]);
 
   useEffect(() => {
     window.localStorage.setItem("geoworkbench.sidebar", sidebarCollapsed ? "collapsed" : "expanded");
@@ -132,6 +160,16 @@ export function App() {
     enabled: isAuthed && Boolean(activeId),
   });
   const roles = useQuery({ queryKey: ["roles"], queryFn: listRoles, enabled: isAuthed });
+  const permissions = useQuery({
+    queryKey: ["permissions"],
+    queryFn: listPermissions,
+    enabled: isAuthed,
+  });
+  const roleAccess = useQuery({
+    queryKey: ["roleAccess", selectedAccessRole],
+    queryFn: () => getRoleAccess(selectedAccessRole),
+    enabled: isAuthed && session?.user.role === "system_admin" && Boolean(selectedAccessRole),
+  });
   const users = useQuery({
     queryKey: ["users"],
     queryFn: listUsers,
@@ -292,6 +330,27 @@ export function App() {
       resetUserPassword(payload.userId, payload.newPassword),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
+  const createRoleMutation = useMutation({
+    mutationFn: createRole,
+    onSuccess: (role) => {
+      setSelectedAccessRole(role.key);
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+    },
+  });
+  const updateRoleMutation = useMutation({
+    mutationFn: (payload: { roleKey: string; patch: Partial<Role> }) =>
+      updateRole(payload.roleKey, payload.patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+  const updateRoleAccessMutation = useMutation({
+    mutationFn: (payload: { roleKey: string; permissions: string[] }) =>
+      updateRoleAccess(payload.roleKey, payload.permissions),
+    onSuccess: (_, variables) =>
+      queryClient.invalidateQueries({ queryKey: ["roleAccess", variables.roleKey] }),
+  });
   const changePasswordMutation = useMutation({
     mutationFn: (payload: { currentPassword: string; newPassword: string }) =>
       changePassword(payload.currentPassword, payload.newPassword),
@@ -356,10 +415,6 @@ export function App() {
           <button type="button" className="brand-lockup" onClick={() => setView("landing")}>
             <img className="brand-logo-full" src="/branding/simpro-logo.png" alt="Simpro" />
             <img className="brand-logo-mark" src="/branding/simpro-favicon.png" alt="Simpro" />
-            <span>
-              <strong>GeoWorkbench</strong>
-              <small>Borehole correction</small>
-            </span>
           </button>
           <button
             type="button"
@@ -372,55 +427,102 @@ export function App() {
         </div>
         <nav className="app-nav" aria-label="Primary">
           <button type="button" className={view === "landing" ? "active" : ""} onClick={() => navigateTo("landing")}>
-            <span>DB</span><b>Dashboard</b>
+            <span><LayoutDashboard size={17} strokeWidth={2.1} /></span><b>Dashboard</b>
           </button>
           <button type="button" className={view === "workbench" ? "active" : ""} disabled={!activeId} onClick={() => openWorkbench()}>
-            <span>WB</span><b>Workbench</b>
+            <span><PanelTop size={17} strokeWidth={2.1} /></span><b>Workbench</b>
           </button>
           <button type="button" className={view === "import" ? "active" : ""} onClick={() => navigateTo("import")} disabled={!activeId}>
-            <span>IN</span><b>Import</b>
+            <span><Upload size={17} strokeWidth={2.1} /></span><b>Import</b>
           </button>
           <button type="button" className={view === "export" ? "active" : ""} onClick={() => navigateTo("export")} disabled={!activeId}>
-            <span>EX</span><b>Export</b>
+            <span><Download size={17} strokeWidth={2.1} /></span><b>Export</b>
           </button>
           <button type="button" className={view === "correlation" ? "active" : ""} onClick={() => navigateTo("correlation")} disabled={!correlationIds.length}>
-            <span>CR</span><b>Correlation</b>
+            <span><GitCompareArrows size={17} strokeWidth={2.1} /></span><b>Correlation</b>
           </button>
-          <button
-            type="button"
-            className={view === "users" ? "active" : ""}
-            onClick={() => navigateTo("users")}
-            disabled={session.user.role !== "system_admin"}
-          >
-            <span>UM</span><b>Users</b>
-          </button>
+          <div className={`nav-group ${view === "settings" ? "active" : ""}`}>
+            <button
+              type="button"
+              className={view === "settings" ? "active" : ""}
+              onClick={() => {
+                setSettingsMenuOpen((open) => !open);
+                if (view !== "settings") navigateTo("settings");
+              }}
+              disabled={session.user.role !== "system_admin"}
+            >
+              <span><Settings size={17} strokeWidth={2.1} /></span><b>Settings</b>
+            </button>
+            {settingsMenuOpen && (
+              <div className="app-subnav" aria-label="Settings">
+                <button
+                  type="button"
+                  className={view === "settings" && settingsTab === "users" ? "active" : ""}
+                  onClick={() => {
+                    setSettingsTab("users");
+                    navigateTo("settings");
+                  }}
+                >
+                  Users
+                </button>
+                <button
+                  type="button"
+                  className={view === "settings" && settingsTab === "roles" ? "active" : ""}
+                  onClick={() => {
+                    setSettingsTab("roles");
+                    navigateTo("settings");
+                  }}
+                >
+                  Roles
+                </button>
+                <button
+                  type="button"
+                  className={view === "settings" && settingsTab === "access" ? "active" : ""}
+                  onClick={() => {
+                    setSettingsTab("access");
+                    navigateTo("settings");
+                  }}
+                >
+                  Access Matrix
+                </button>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             disabled={!activeId}
             onClick={() => setDisplayEditorOpen(true)}
           >
-            <span>DS</span><b>Display setup</b>
+            <span><SlidersHorizontal size={17} strokeWidth={2.1} /></span><b>Display setup</b>
           </button>
         </nav>
-        <div className="sidebar-footer">
-          <span>{sidebarCollapsed ? "GW" : "UAT workspace"}</span>
-        </div>
+        <div className="sidebar-footer" aria-hidden="true" />
       </header>
       <section className="page-topbar">
-        <div>
-          <strong>{pageTitle(view)}</strong>
-          <span>
-            {selectedBorehole
-              ? `${selectedBorehole.code} selected · ${displayChoice === "default" ? "Default display" : "Saved display"}`
-              : "No borehole selected"}
-          </span>
+        <div className="page-selection">
+          {selectedBorehole ? (
+            <div className="selected-summary">
+              <div className="selected-borehole-stack">
+                <span className="selected-code">{selectedBorehole.code}</span>
+                <small>{displayChoice === "default" ? "Default display" : "Saved display"}</small>
+              </div>
+              <span className="selected-context">
+                <Building2 size={14} strokeWidth={2} />
+                {selectedBorehole.project_code} / {selectedBorehole.site_code}
+              </span>
+            </div>
+          ) : (
+            <span className="selected-empty">No borehole selected</span>
+          )}
         </div>
         <div className="page-actions">
-          {selectedBorehole && (
-            <span className="selected-context">
-              {selectedBorehole.project_code} / {selectedBorehole.site_code}
-            </span>
-          )}
+          <button type="button" className="utility-button" title="Notifications">
+            <Bell size={19} strokeWidth={2.1} />
+            <span>0</span>
+          </button>
+          <button type="button" className="utility-button" title="Language settings">
+            <Globe2 size={19} strokeWidth={2.1} />
+          </button>
           <div className="profile-menu-wrap">
             <button
               type="button"
@@ -439,23 +541,57 @@ export function App() {
                   <strong>{session.user.display_name}</strong>
                   <span>{session.user.username} · {roleLabel(session.user.role)}</span>
                 </div>
-                <label className="theme-toggle">
+                <div className="profile-theme-row">
                   <span>Theme</span>
-                  <select value={theme} onChange={(event) => setTheme(event.target.value as "dark" | "light")}>
-                    <option value="dark">Dark operations</option>
-                    <option value="light">Light review</option>
-                  </select>
-                </label>
-                <div className="diagnostics-card">
-                  <strong>UAT diagnostics</strong>
+                  <div className="login-theme-switch profile-theme-switch" aria-label="Theme">
+                    <button
+                      type="button"
+                      className={theme === "light" ? "active" : ""}
+                      title="Light theme"
+                      onClick={() => setTheme("light")}
+                    >
+                      <SunIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className={theme === "dark" ? "active" : ""}
+                      title="Dark theme"
+                      onClick={() => setTheme("dark")}
+                    >
+                      <MoonIcon />
+                    </button>
+                  </div>
+                </div>
+                <div className="profile-accent-row">
+                  <span>Accent</span>
+                  <div className="accent-switch" aria-label="Accent color">
+                    {(["red", "blue", "teal", "violet"] as const).map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        className={`accent-${item} ${accent === item ? "active" : ""}`}
+                        title={`${item} accent`}
+                        onClick={() => setAccent(item)}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="profile-status-row">
                   {diagnostics.data ? (
                     <>
-                      <span>API {diagnostics.data.status}</span>
-                      <span>DB {diagnostics.data.database.status}</span>
-                      <span>AI {diagnostics.data.ai.provider}</span>
+                      <span className="status-dot" />
+                      <strong>Status</strong>
+                      <small>
+                        API {diagnostics.data.status} · DB {diagnostics.data.database.status} · AI{" "}
+                        {diagnostics.data.ai.provider}
+                      </small>
                     </>
                   ) : (
-                    <span>{diagnostics.isLoading ? "Checking health..." : "Open to refresh health."}</span>
+                    <>
+                      <span className="status-dot pending" />
+                      <strong>Status</strong>
+                      <small>{diagnostics.isLoading ? "Checking health..." : "Open menu to refresh."}</small>
+                    </>
                   )}
                 </div>
                 <button type="button" onClick={() => setPasswordDialogOpen(true)}>
@@ -582,30 +718,47 @@ export function App() {
         />
       )}
 
-      {view === "users" && (
-        <UserManagement
+      {view === "settings" && (
+        <SettingsPage
+          activeTab={settingsTab}
           users={users.data ?? []}
           roles={roles.data ?? []}
+          permissions={permissions.data ?? []}
+          selectedAccessRole={selectedAccessRole}
+          selectedAccessPermissions={roleAccess.data?.permissions ?? []}
           currentUserId={session.user.id}
-          loading={users.isLoading || roles.isLoading}
+          loading={users.isLoading || roles.isLoading || permissions.isLoading}
           busy={
             createUserMutation.isPending ||
             updateUserMutation.isPending ||
             deactivateUserMutation.isPending ||
-            resetPasswordMutation.isPending
+            resetPasswordMutation.isPending ||
+            createRoleMutation.isPending ||
+            updateRoleMutation.isPending ||
+            updateRoleAccessMutation.isPending
           }
           error={
             users.error instanceof Error
               ? users.error.message
               : roles.error instanceof Error
                 ? roles.error.message
-                : null
+                : permissions.error instanceof Error
+                  ? permissions.error.message
+                  : roleAccess.error instanceof Error
+                    ? roleAccess.error.message
+                    : null
           }
+          onAccessRoleChange={setSelectedAccessRole}
           onCreate={(payload) => createUserMutation.mutate(payload)}
           onUpdate={(userId, patch) => updateUserMutation.mutate({ userId, patch })}
           onDeactivate={(userId) => deactivateUserMutation.mutate(userId)}
           onResetPassword={(userId, newPassword) =>
             resetPasswordMutation.mutate({ userId, newPassword })
+          }
+          onCreateRole={(payload) => createRoleMutation.mutate(payload)}
+          onUpdateRole={(roleKey, patch) => updateRoleMutation.mutate({ roleKey, patch })}
+          onUpdateRoleAccess={(roleKey, nextPermissions) =>
+            updateRoleAccessMutation.mutate({ roleKey, permissions: nextPermissions })
           }
         />
       )}
@@ -860,33 +1013,46 @@ function roleLabel(role: string): string {
     .join(" ");
 }
 
-function pageTitle(view: "landing" | "workbench" | "correlation" | "import" | "export" | "users"): string {
+function pageTitle(view: "landing" | "workbench" | "correlation" | "import" | "export" | "settings"): string {
   if (view === "workbench") return "Workbench";
   if (view === "correlation") return "Correlation";
   if (view === "import") return "Import Center";
   if (view === "export") return "Export Center";
-  if (view === "users") return "User Management";
+  if (view === "settings") return "Settings";
   return "Dashboard";
 }
 
-function UserManagement({
+function SettingsPage({
+  activeTab,
   users,
   roles,
+  permissions,
+  selectedAccessRole,
+  selectedAccessPermissions,
   currentUserId,
   loading,
   busy,
   error,
+  onAccessRoleChange,
   onCreate,
   onUpdate,
   onDeactivate,
   onResetPassword,
+  onCreateRole,
+  onUpdateRole,
+  onUpdateRoleAccess,
 }: {
+  activeTab: "users" | "roles" | "access";
   users: User[];
   roles: Role[];
+  permissions: Permission[];
+  selectedAccessRole: string;
+  selectedAccessPermissions: string[];
   currentUserId: number;
   loading: boolean;
   busy: boolean;
   error: string | null;
+  onAccessRoleChange: (roleKey: string) => void;
   onCreate: (payload: {
     username: string;
     display_name: string;
@@ -899,10 +1065,18 @@ function UserManagement({
   onUpdate: (userId: number, patch: Partial<User>) => void;
   onDeactivate: (userId: number) => void;
   onResetPassword: (userId: number, newPassword: string) => void;
+  onCreateRole: (payload: {
+    key: string;
+    label: string;
+    description?: string | null;
+    is_active?: number;
+  }) => void;
+  onUpdateRole: (roleKey: string, patch: Partial<Role>) => void;
+  onUpdateRoleAccess: (roleKey: string, permissions: string[]) => void;
 }) {
   const [editing, setEditing] = useState<User | null>(null);
   const [resetting, setResetting] = useState<User | null>(null);
-  const defaultRole = roles[0]?.key ?? "central_geologist";
+  const defaultRole = roles.find((role) => role.is_active)?.key ?? "central_geologist";
   const create = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -917,121 +1091,171 @@ function UserManagement({
     });
     event.currentTarget.reset();
   };
+  const createRoleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    onCreateRole({
+      key: String(form.get("key") || ""),
+      label: String(form.get("label") || ""),
+      description: String(form.get("description") || "") || null,
+      is_active: form.get("is_active") === "on" ? 1 : 0,
+    });
+    event.currentTarget.reset();
+  };
+  const togglePermission = (permissionKey: string) => {
+    const next = selectedAccessPermissions.includes(permissionKey)
+      ? selectedAccessPermissions.filter((key) => key !== permissionKey)
+      : [...selectedAccessPermissions, permissionKey];
+    onUpdateRoleAccess(selectedAccessRole, next);
+  };
   return (
-    <section className="iam-page">
-      <div className="iam-panel">
-        <div className="iam-panel-header">
-          <div>
-            <h1>Local Users</h1>
-            <span>Database users, local passwords, active status, roles, and lockout state.</span>
+    <section className="settings-page">
+      {error && <div className="auth-error">{error}</div>}
+      {activeTab === "users" && (
+        <div className="iam-page">
+          <div className="iam-panel">
+            <div className="iam-panel-header">
+              <div>
+                <h1>Local Users</h1>
+                <span>Database users, local passwords, active status, roles, and lockout state.</span>
+              </div>
+              <strong>{users.length} users</strong>
+            </div>
+            {loading ? (
+              <div className="empty">Loading users...</div>
+            ) : (
+              <div className="iam-table-wrap">
+                <table className="iam-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Role</th>
+                      <th>Provider</th>
+                      <th>Status</th>
+                      <th>Failed</th>
+                      <th>Last Login</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.id}>
+                        <td><strong>{user.display_name}</strong><span>{user.username}</span></td>
+                        <td>{roleLabel(user.role)}</td>
+                        <td>{user.auth_provider}</td>
+                        <td>
+                          <mark className={user.is_active ? "status-active" : "status-inactive"}>
+                            {user.locked_until ? "Locked" : user.is_active ? "Active" : "Inactive"}
+                          </mark>
+                        </td>
+                        <td>{user.failed_login_count}</td>
+                        <td>{formatDateTime(user.last_login_at)}</td>
+                        <td>
+                          <div className="iam-row-actions">
+                            <button type="button" onClick={() => setEditing(user)} disabled={busy}>Edit</button>
+                            <button type="button" onClick={() => setResetting(user)} disabled={busy}>Reset</button>
+                            <button
+                              type="button"
+                              onClick={() => user.is_active ? onDeactivate(user.id) : onUpdate(user.id, { is_active: 1 })}
+                              disabled={busy || user.id === currentUserId}
+                            >
+                              {user.is_active ? "Deactivate" : "Activate"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-          <strong>{users.length} users</strong>
+          <form className="iam-panel iam-form" onSubmit={create}>
+            <div className="iam-panel-header"><div><h1>Create Local User</h1><span>For Entra users, first login can still auto-create the user profile.</span></div></div>
+            <label>Username<input name="username" required placeholder="username or email" /></label>
+            <label>Display name<input name="display_name" required placeholder="Central Geologist" /></label>
+            <label>Email<input name="email" type="email" placeholder="user@example.com" /></label>
+            <label>Mobile<input name="mobile_number" placeholder="+91..." /></label>
+            <label>
+              Role
+              <select name="role" defaultValue={defaultRole}>
+                {roles.filter((role) => role.is_active).map((role) => <option key={role.key} value={role.key}>{role.label}</option>)}
+              </select>
+            </label>
+            <label>Initial password<input name="password" type="password" required minLength={8} /></label>
+            <label className="iam-check"><input name="is_active" type="checkbox" defaultChecked /> Active</label>
+            <button type="submit" disabled={busy}>Create User</button>
+          </form>
         </div>
-        {error && <div className="auth-error">{error}</div>}
-        {loading ? (
-          <div className="empty">Loading users...</div>
-        ) : (
-          <div className="iam-table-wrap">
-            <table className="iam-table">
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Role</th>
-                  <th>Provider</th>
-                  <th>Status</th>
-                  <th>Failed</th>
-                  <th>Last Login</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id}>
-                    <td>
-                      <strong>{user.display_name}</strong>
-                      <span>{user.username}</span>
-                    </td>
-                    <td>{roleLabel(user.role)}</td>
-                    <td>{user.auth_provider}</td>
-                    <td>
-                      <mark className={user.is_active ? "status-active" : "status-inactive"}>
-                        {user.locked_until ? "Locked" : user.is_active ? "Active" : "Inactive"}
-                      </mark>
-                    </td>
-                    <td>{user.failed_login_count}</td>
-                    <td>{formatDateTime(user.last_login_at)}</td>
-                    <td>
-                      <div className="iam-row-actions">
-                        <button type="button" onClick={() => setEditing(user)} disabled={busy}>
-                          Edit
-                        </button>
-                        <button type="button" onClick={() => setResetting(user)} disabled={busy}>
-                          Reset
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            user.is_active
-                              ? onDeactivate(user.id)
-                              : onUpdate(user.id, { is_active: 1 })
-                          }
-                          disabled={busy || user.id === currentUserId}
-                        >
-                          {user.is_active ? "Deactivate" : "Activate"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+      )}
+      {activeTab === "roles" && (
+        <div className="iam-page">
+          <div className="iam-panel">
+            <div className="iam-panel-header">
+              <div><h1>Roles</h1><span>Create customer-specific roles and keep system defaults protected.</span></div>
+              <strong>{roles.length} roles</strong>
+            </div>
+            <div className="role-list">
+              {roles.map((role) => (
+                <div key={role.key} className="role-card">
+                  <div><strong>{role.label}</strong><span>{role.key}</span><small>{role.description}</small></div>
+                  <label className="iam-check">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(role.is_active)}
+                      disabled={busy || Boolean(role.is_system)}
+                      onChange={(event) => onUpdateRole(role.key, { is_active: event.currentTarget.checked ? 1 : 0 })}
+                    />
+                    Active
+                  </label>
+                  <mark>{role.is_system ? "System" : "Custom"}</mark>
+                </div>
+              ))}
+            </div>
+          </div>
+          <form className="iam-panel iam-form" onSubmit={createRoleSubmit}>
+            <div className="iam-panel-header"><div><h1>Create Role</h1><span>Role key is stable for access mapping and audit trails.</span></div></div>
+            <label>Role key<input name="key" required placeholder="quality_reviewer" /></label>
+            <label>Label<input name="label" required placeholder="Quality Reviewer" /></label>
+            <label>Description<textarea name="description" rows={4} /></label>
+            <label className="iam-check"><input name="is_active" type="checkbox" defaultChecked /> Active</label>
+            <button type="submit" disabled={busy}>Create Role</button>
+          </form>
+        </div>
+      )}
+      {activeTab === "access" && (
+        <div className="iam-page iam-page-single">
+          <div className="iam-panel access-panel">
+            <div className="iam-panel-header">
+              <div><h1>Role Access Mapping</h1><span>Configure role access. Enforcement can be deepened per feature as workflows mature.</span></div>
+            </div>
+            <div className="access-layout">
+              <div className="permission-grid">
+                {permissions.map((permission) => (
+                  <label key={permission.key} className="permission-card">
+                    <input type="checkbox" checked={selectedAccessPermissions.includes(permission.key)} disabled={busy} onChange={() => togglePermission(permission.key)} />
+                    <span>{permission.category}</span>
+                    <strong>{permission.label}</strong>
+                    <small>{permission.description}</small>
+                  </label>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      <form className="iam-panel iam-form" onSubmit={create}>
-        <div className="iam-panel-header">
-          <div>
-            <h1>Create Local User</h1>
-            <span>For Entra users, first login can still auto-create the user profile.</span>
+              </div>
+              <aside className="access-role-panel">
+                <label>
+                  <strong>Role</strong>
+                  <select value={selectedAccessRole} onChange={(event) => onAccessRoleChange(event.target.value)}>
+                    {roles.map((role) => <option key={role.key} value={role.key}>{role.label}</option>)}
+                  </select>
+                </label>
+                <div>
+                  <span>Assigned access</span>
+                  <b>{selectedAccessPermissions.length} permissions</b>
+                </div>
+              </aside>
+            </div>
           </div>
         </div>
-        <label>
-          Username
-          <input name="username" required placeholder="username or email" />
-        </label>
-        <label>
-          Display name
-          <input name="display_name" required placeholder="Central Geologist" />
-        </label>
-        <label>
-          Email
-          <input name="email" type="email" placeholder="user@example.com" />
-        </label>
-        <label>
-          Mobile
-          <input name="mobile_number" placeholder="+91..." />
-        </label>
-        <label>
-          Role
-          <select name="role" defaultValue={defaultRole}>
-            {roles.map((role) => (
-              <option key={role.key} value={role.key}>
-                {role.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Initial password
-          <input name="password" type="password" required minLength={8} />
-        </label>
-        <label className="iam-check">
-          <input name="is_active" type="checkbox" defaultChecked /> Active
-        </label>
-        <button type="submit" disabled={busy}>
-          Create User
-        </button>
-      </form>
+      )}
       {editing && (
         <UserEditDialog
           user={editing}
@@ -1215,10 +1439,11 @@ function LandingPage({
 
   return (
     <section className="landing-page">
-      <div className="landing-hero">
-        <div className="landing-workflow-card">
+      <div className="dashboard-column dashboard-column-main">
+        <div className="landing-workflow-card dashboard-widget">
           <div className="landing-workflow-title">
             <h1>Borehole Dashboard</h1>
+            <span>Configurable dashboard widgets</span>
           </div>
           <div className="dashboard-kpis">
             <DashboardKpi label="Active" value={String(active.length)} />
@@ -1227,7 +1452,22 @@ function LandingPage({
             <DashboardKpi label="Selected" value={selectedBorehole?.code ?? "-"} />
           </div>
         </div>
-        <div className="landing-settings workspace-setup-card">
+        {loading && <div className="empty">Loading boreholes...</div>}
+        {!loading && (
+          <BoreholeGroup
+            title="Active Boreholes"
+            boreholes={active}
+            pageSize={5}
+            activeId={activeId}
+            onSelect={onSelect}
+            onOpen={onOpen}
+            onManageDisplay={onManageDisplay}
+          />
+        )}
+      </div>
+
+      <div className="dashboard-column dashboard-column-side">
+        <div className="landing-settings workspace-setup-card dashboard-widget">
           <div className="project-default-header">
             <strong>Workspace Setup</strong>
             <span>{selectedBorehole ? selectedBorehole.workflow_status.replaceAll("_", " ") : "Select borehole"}</span>
@@ -1252,15 +1492,6 @@ function LandingPage({
               <option value="default">Default correction display</option>
             </select>
           </label>
-          <div className="selected-workbench-card">
-            <span>Current selection</span>
-            <strong>{selectedBorehole?.code ?? "No borehole"}</strong>
-            <small>
-              {selectedBorehole
-                ? `${selectedBorehole.project_code} / ${selectedBorehole.site_code} · ${selectedBorehole.total_depth} m`
-                : "Create or import a borehole to begin."}
-            </small>
-          </div>
           <div className="setup-actions">
             <button type="button" disabled={!selectedBorehole} onClick={() => selectedBorehole && onOpen(selectedBorehole.id)}>
               Open Workbench
@@ -1274,20 +1505,7 @@ function LandingPage({
             </button>
           </div>
         </div>
-      </div>
-
-      {loading && <div className="empty">Loading boreholes...</div>}
-      {!loading && (
-        <div className="borehole-groups">
-          <BoreholeGroup
-            title="Active Boreholes"
-            boreholes={active}
-            pageSize={3}
-            activeId={activeId}
-            onSelect={onSelect}
-            onOpen={onOpen}
-            onManageDisplay={onManageDisplay}
-          />
+        {!loading && (
           <BoreholeGroup
             title="Historic Boreholes"
             boreholes={historic}
@@ -1297,8 +1515,8 @@ function LandingPage({
             onOpen={onOpen}
             onManageDisplay={onManageDisplay}
           />
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }
@@ -1335,7 +1553,7 @@ function BoreholeGroup({
   const visibleBoreholes = boreholes.slice(safePage * pageSize, safePage * pageSize + pageSize);
 
   return (
-    <section className="borehole-group">
+    <section className="borehole-group dashboard-widget">
       <div className="borehole-group-header">
         <h2>{title}</h2>
         <div className="borehole-group-tools">
@@ -1359,25 +1577,38 @@ function BoreholeGroup({
           )}
         </div>
       </div>
-      <div className="borehole-card-grid">
+      <div className="borehole-table" role="table" aria-label={title}>
+        <div className="borehole-table-head" role="row">
+          <span>Project / Site</span>
+          <span>Borehole</span>
+          <span>Depth</span>
+          <span>Status</span>
+          <span>Actions</span>
+        </div>
         {visibleBoreholes.map((item) => (
-          <article
+          <div
             key={item.id}
-            className={`borehole-card ${item.id === activeId ? "selected" : ""}`}
+            className={`borehole-row ${item.id === activeId ? "selected" : ""}`}
             onClick={() => onSelect(item.id)}
             onDoubleClick={() => onOpen(item.id)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSelect(item.id);
+              }
+            }}
+            role="row"
             tabIndex={0}
           >
-            <span>{item.project_code} / {item.site_code}</span>
-            <strong>{item.code}</strong>
-            <small>{item.title}</small>
-            <div>
-            <b>{item.total_depth} m</b>
-            <em>{item.workflow_status.replaceAll("_", " ")}</em>
-          </div>
-          {item.id === activeId && <mark>Selected</mark>}
-          <footer>
-            <span>
+            <span className="borehole-project" role="cell">
+              <span>{item.project_code} / {item.site_code}</span>
+              <small>{item.title}</small>
+            </span>
+            <strong role="cell">{item.code}</strong>
+            <b role="cell">{item.total_depth} m</b>
+            <em role="cell">{item.workflow_status.replaceAll("_", " ")}</em>
+            <span className="borehole-row-actions" role="cell">
+              {item.id === activeId && <mark>Selected</mark>}
               <button
                 type="button"
                 onClick={(event) => {
@@ -1385,20 +1616,19 @@ function BoreholeGroup({
                   onSelect(item.id);
                 }}
               >
-                  Select
+                Select
               </button>
               <button
                 type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onManageDisplay(item.id);
-                  }}
-                >
-                  Manage Display
-                </button>
-              </span>
-            </footer>
-          </article>
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onManageDisplay(item.id);
+                }}
+              >
+                Manage Display
+              </button>
+            </span>
+          </div>
         ))}
         {!boreholes.length && <div className="empty">No boreholes in this group.</div>}
       </div>

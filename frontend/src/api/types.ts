@@ -25,7 +25,21 @@ export type User = {
 export type Role = {
   key: string;
   label: string;
+  description: string | null;
+  is_system: number;
+  is_active: number;
+};
+
+export type Permission = {
+  key: string;
+  label: string;
   description: string;
+  category: string;
+};
+
+export type RoleAccess = {
+  role_key: string;
+  permissions: string[];
 };
 
 export type AuthToken = {

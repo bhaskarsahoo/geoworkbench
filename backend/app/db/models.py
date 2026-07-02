@@ -37,6 +37,35 @@ class User(Base):
     )
 
 
+class Role(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    label: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_system: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    is_active: Mapped[int] = mapped_column(Integer, default=1, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    permissions: Mapped[list["RolePermission"]] = relationship(
+        back_populates="role", cascade="all, delete-orphan"
+    )
+
+
+class RolePermission(Base):
+    __tablename__ = "role_permissions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), index=True)
+    permission_key: Mapped[str] = mapped_column(String(120), index=True)
+    enabled: Mapped[int] = mapped_column(Integer, default=1)
+
+    role: Mapped[Role] = relationship(back_populates="permissions")
+
+
 class AuthSession(Base):
     __tablename__ = "auth_sessions"
 

@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.models import AuthSession, MobileOtp, User
+from app.db.models import AuthSession, MobileOtp, Role, RolePermission, User
 
 ROLE_DEFINITIONS = [
     {
@@ -40,6 +40,68 @@ ROLE_KEYS = {role["key"] for role in ROLE_DEFINITIONS}
 ADMIN_ROLES = {"system_admin"}
 MAX_FAILED_LOGINS = 5
 LOCK_MINUTES = 15
+PERMISSION_DEFINITIONS = [
+    {
+        "key": "workspace.view",
+        "label": "View workspace",
+        "description": "Open borehole displays, correlation, and dashboards.",
+        "category": "Workspace",
+    },
+    {
+        "key": "workspace.edit",
+        "label": "Edit interpretation",
+        "description": "Edit intervals, remarks, display settings, and corrections.",
+        "category": "Workspace",
+    },
+    {
+        "key": "ai.review",
+        "label": "AI review",
+        "description": "Run validations, generate AI suggestions, and accept/reject insights.",
+        "category": "AI",
+    },
+    {
+        "key": "import.manage",
+        "label": "Import data",
+        "description": "Upload, parse, template, and merge source files.",
+        "category": "Data Exchange",
+    },
+    {
+        "key": "export.manage",
+        "label": "Export data",
+        "description": "Configure exports, approve readiness, and download output files.",
+        "category": "Data Exchange",
+    },
+    {
+        "key": "mobile.capture",
+        "label": "Mobile capture",
+        "description": "Submit field forms, files, photos, and runtime parameters.",
+        "category": "Mobile",
+    },
+    {
+        "key": "settings.users",
+        "label": "Manage users",
+        "description": "Create users, reset passwords, activate users, and manage roles.",
+        "category": "Settings",
+    },
+    {
+        "key": "settings.access",
+        "label": "Manage access",
+        "description": "Create roles and configure role access mappings.",
+        "category": "Settings",
+    },
+]
+DEFAULT_ROLE_PERMISSIONS = {
+    "system_admin": [permission["key"] for permission in PERMISSION_DEFINITIONS],
+    "central_geologist": [
+        "workspace.view",
+        "workspace.edit",
+        "ai.review",
+        "import.manage",
+        "export.manage",
+    ],
+    "site_geologist": ["workspace.view", "mobile.capture"],
+    "viewer": ["workspace.view"],
+}
 
 
 def _to_aware(value: datetime | None) -> datetime | None:
@@ -50,6 +112,131 @@ def _to_aware(value: datetime | None) -> datetime | None:
 
 def list_roles() -> list[dict]:
     return ROLE_DEFINITIONS
+
+
+def permission_catalog() -> list[dict]:
+    return PERMISSION_DEFINITIONS
+
+
+def ensure_roles(db: Session) -> None:
+    existing = {role.key: role for role in db.scalars(select(Role)).all()}
+    changed = False
+    for definition in ROLE_DEFINITIONS:
+        role = existing.get(definition["key"])
+        if role is None:
+            role = Role(
+                key=definition["key"],
+                label=definition["label"],
+                description=definition["description"],
+                is_system=1,
+                is_active=1,
+            )
+            db.add(role)
+            changed = True
+        else:
+            if role.is_system != 1:
+                role.is_system = 1
+                changed = True
+            if not role.description:
+                role.description = definition["description"]
+                changed = True
+    if changed:
+        db.commit()
+    for role in db.scalars(select(Role)).all():
+        default_permissions = DEFAULT_ROLE_PERMISSIONS.get(role.key, [])
+        existing_permissions = {
+            permission.permission_key
+            for permission in db.scalars(
+                select(RolePermission).where(RolePermission.role_id == role.id)
+            )
+        }
+        for permission_key in default_permissions:
+            if permission_key not in existing_permissions:
+                db.add(RolePermission(role_id=role.id, permission_key=permission_key, enabled=1))
+        db.commit()
+
+
+def list_configured_roles(db: Session) -> list[Role]:
+    ensure_roles(db)
+    return db.scalars(select(Role).order_by(Role.label)).all()
+
+
+def configured_role_keys(db: Session) -> set[str]:
+    ensure_roles(db)
+    return {role.key for role in db.scalars(select(Role).where(Role.is_active == 1)).all()}
+
+
+def create_role(db: Session, key: str, label: str, description: str | None, is_active: int) -> Role:
+    normalised_key = key.strip().lower().replace(" ", "_")
+    if not normalised_key:
+        raise ValueError("Role key is required")
+    if db.scalar(select(Role).where(Role.key == normalised_key)):
+        raise ValueError("Role already exists")
+    role = Role(
+        key=normalised_key,
+        label=label.strip(),
+        description=description,
+        is_system=0,
+        is_active=1 if is_active else 0,
+    )
+    db.add(role)
+    db.commit()
+    db.refresh(role)
+    return role
+
+
+def update_role(
+    db: Session,
+    role_key: str,
+    label: str | None = None,
+    description: str | None = None,
+    is_active: int | None = None,
+) -> Role:
+    role = db.scalar(select(Role).where(Role.key == role_key))
+    if role is None:
+        raise ValueError("Role not found")
+    if label is not None:
+        role.label = label
+    if description is not None:
+        role.description = description
+    if is_active is not None:
+        role.is_active = 1 if is_active else 0
+    db.add(role)
+    db.commit()
+    db.refresh(role)
+    return role
+
+
+def get_role_permissions(db: Session, role_key: str) -> list[str]:
+    ensure_roles(db)
+    role = db.scalar(select(Role).where(Role.key == role_key))
+    if role is None:
+        raise ValueError("Role not found")
+    return [
+        permission.permission_key
+        for permission in db.scalars(
+            select(RolePermission)
+            .where(RolePermission.role_id == role.id)
+            .where(RolePermission.enabled == 1)
+            .order_by(RolePermission.permission_key)
+        )
+    ]
+
+
+def set_role_permissions(db: Session, role_key: str, permissions: list[str]) -> list[str]:
+    ensure_roles(db)
+    valid_permissions = {permission["key"] for permission in PERMISSION_DEFINITIONS}
+    unknown = sorted(set(permissions) - valid_permissions)
+    if unknown:
+        raise ValueError(f"Unknown permission(s): {', '.join(unknown)}")
+    role = db.scalar(select(Role).where(Role.key == role_key))
+    if role is None:
+        raise ValueError("Role not found")
+    db.query(RolePermission).filter(RolePermission.role_id == role.id).delete()
+    for permission_key in sorted(set(permissions)):
+        db.add(RolePermission(role_id=role.id, permission_key=permission_key, enabled=1))
+    db.commit()
+    return get_role_permissions(db, role_key)
 
 
 def require_admin(user: User) -> None:
@@ -230,6 +417,7 @@ def login_with_entra_code(db: Session, code: str, state: str) -> tuple[User, Aut
 
 
 def ensure_demo_users(db: Session) -> None:
+    ensure_roles(db)
     existing_admin = db.scalar(select(User).where(User.username == "geologist"))
     if existing_admin:
         changed = False
@@ -345,7 +533,8 @@ def create_user(
     mobile_number: str | None = None,
     is_active: int = 1,
 ) -> User:
-    ensure_valid_role(role)
+    if role not in configured_role_keys(db):
+        raise ValueError("Invalid role")
     if db.scalar(select(User).where(User.username == username)):
         raise ValueError("Username already exists")
     if len(password) < 8:
@@ -379,7 +568,9 @@ def update_user(
     if user is None:
         raise ValueError("User not found")
     if role is not None:
-        user.role = ensure_valid_role(role)
+        if role not in configured_role_keys(db):
+            raise ValueError("Invalid role")
+        user.role = role
     if display_name is not None:
         user.display_name = display_name
     if email is not None:
