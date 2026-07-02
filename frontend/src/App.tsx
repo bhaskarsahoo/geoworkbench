@@ -66,7 +66,9 @@ import { ImportCenter } from "./workbench/imports/ImportCenter";
 export function App() {
   const queryClient = useQueryClient();
   const [boreholeId, setBoreholeId] = useState<number | null>(null);
-  const [view, setView] = useState<"landing" | "workbench" | "correlation" | "import" | "export" | "settings">("landing");
+  const [view, setView] = useState<
+    "landing" | "workbench" | "correlation" | "import" | "export" | "settings" | "displayEditor"
+  >("landing");
   const [settingsTab, setSettingsTab] = useState<"users" | "roles" | "access">("users");
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(true);
   const [selectedAccessRole, setSelectedAccessRole] = useState("system_admin");
@@ -490,8 +492,12 @@ export function App() {
           </div>
           <button
             type="button"
+            className={view === "displayEditor" ? "active" : ""}
             disabled={!activeId}
-            onClick={() => setDisplayEditorOpen(true)}
+            onClick={() => {
+              setDisplayEditorOpen(true);
+              navigateTo("displayEditor");
+            }}
           >
             <span><SlidersHorizontal size={17} strokeWidth={2.1} /></span><b>Display setup</b>
           </button>
@@ -619,6 +625,7 @@ export function App() {
           onManageDisplay={(id) => {
             setBoreholeId(id);
             setDisplayEditorOpen(true);
+            setView("displayEditor");
           }}
         />
       )}
@@ -763,6 +770,29 @@ export function App() {
         />
       )}
 
+      {view === "displayEditor" && (
+        <DisplayEditorDialog
+          open={displayEditorOpen}
+          layout={workbench.data?.layout ?? null}
+          availableCurves={workbench.data?.curves ?? []}
+          saving={saveDisplayLayout.isPending}
+          resetting={resetCurrentLayout.isPending}
+          onSave={(layout) =>
+            saveDisplayLayout.mutate(layout, {
+              onSuccess: () => {
+                setDisplayEditorOpen(false);
+                setView("workbench");
+              },
+            })
+          }
+          onReset={() => resetCurrentLayout.mutate()}
+          onClose={() => {
+            setDisplayEditorOpen(false);
+            setView("workbench");
+          }}
+        />
+      )}
+
       {selectedImage && (
         <div className="image-modal" role="dialog" aria-modal="true">
           <div className="image-modal-header">
@@ -797,20 +827,6 @@ export function App() {
           </div>
         </div>
       )}
-      <DisplayEditorDialog
-        open={displayEditorOpen}
-        layout={workbench.data?.layout ?? null}
-        availableCurves={workbench.data?.curves ?? []}
-        saving={saveDisplayLayout.isPending}
-        resetting={resetCurrentLayout.isPending}
-        onSave={(layout) =>
-          saveDisplayLayout.mutate(layout, {
-            onSuccess: () => setDisplayEditorOpen(false),
-          })
-        }
-        onReset={() => resetCurrentLayout.mutate()}
-        onClose={() => setDisplayEditorOpen(false)}
-      />
       {passwordDialogOpen && (
         <PasswordDialog
           busy={changePasswordMutation.isPending}
@@ -1013,12 +1029,13 @@ function roleLabel(role: string): string {
     .join(" ");
 }
 
-function pageTitle(view: "landing" | "workbench" | "correlation" | "import" | "export" | "settings"): string {
+function pageTitle(view: "landing" | "workbench" | "correlation" | "import" | "export" | "settings" | "displayEditor"): string {
   if (view === "workbench") return "Workbench";
   if (view === "correlation") return "Correlation";
   if (view === "import") return "Import Center";
   if (view === "export") return "Export Center";
   if (view === "settings") return "Settings";
+  if (view === "displayEditor") return "Display Editor";
   return "Dashboard";
 }
 

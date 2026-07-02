@@ -235,7 +235,7 @@ export function DisplayEditorDialog({
 
   return (
     <div className="display-modal-backdrop">
-      <div className="display-modal" role="dialog" aria-modal="true">
+      <div className="display-modal">
         <div className="display-modal-header">
           <div>
             <strong>Display Editor</strong>

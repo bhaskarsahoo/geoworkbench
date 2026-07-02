@@ -92,8 +92,20 @@ export function ImportCenter({
 }: Props) {
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
+  const [templatePage, setTemplatePage] = useState(0);
   const selectedProfile =
     importProfiles?.find((profile) => profile.id === selectedProfileId) ?? importProfiles?.[0] ?? null;
+  const templateCards = [
+    ...(importProfiles ?? []).map((profile) => ({ type: "profile" as const, profile })),
+    ...TEMPLATE_CAPABILITIES.map((capability) => ({ type: "planned" as const, capability })),
+  ];
+  const templatePageSize = 4;
+  const templatePageCount = Math.max(1, Math.ceil(templateCards.length / templatePageSize));
+  const safeTemplatePage = Math.min(templatePage, templatePageCount - 1);
+  const visibleTemplateCards = templateCards.slice(
+    safeTemplatePage * templatePageSize,
+    safeTemplatePage * templatePageSize + templatePageSize,
+  );
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -191,33 +203,54 @@ export function ImportCenter({
           </div>
         </section>
 
-        <section className="workflow-panel">
+        <section className="workflow-panel template-registry-panel">
           <div className="workflow-panel-header">
             <strong>Template Registry</strong>
-            <span>{importProfiles?.length ?? 0} profiles</span>
+            <span>
+              {importProfiles?.length ?? 0} profiles · page {safeTemplatePage + 1}/{templatePageCount}
+            </span>
+            {templatePageCount > 1 && (
+              <div className="workflow-panel-pager">
+                <button
+                  type="button"
+                  disabled={safeTemplatePage === 0}
+                  onClick={() => setTemplatePage(safeTemplatePage - 1)}
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  disabled={safeTemplatePage >= templatePageCount - 1}
+                  onClick={() => setTemplatePage(safeTemplatePage + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
           <div className="template-list">
-            {importProfiles?.map((profile) => (
-              <button
-                type="button"
-                key={profile.id}
-                className={`template-card ${selectedProfile?.id === profile.id ? "selected" : ""}`}
-                onClick={() => {
-                  setSelectedProfileId(profile.id);
-                  setMappingDialogOpen(true);
-                }}
-              >
-                <strong>{profile.name}</strong>
-                <span>{profile.profile_type.replaceAll("_", " ")}</span>
-                <small>{profile.description ?? "Mapping profile"}</small>
-              </button>
-            ))}
-            {TEMPLATE_CAPABILITIES.map((capability) => (
-              <article key={capability} className="template-card planned">
-                <strong>{capability}</strong>
-                <span>Planned template capability</span>
-              </article>
-            ))}
+            {visibleTemplateCards.map((item) =>
+              item.type === "profile" ? (
+                <button
+                  type="button"
+                  key={`profile:${item.profile.id}`}
+                  className={`template-card ${selectedProfile?.id === item.profile.id ? "selected" : ""}`}
+                  onClick={() => {
+                    setSelectedProfileId(item.profile.id);
+                    setMappingDialogOpen(true);
+                  }}
+                >
+                  <strong>{item.profile.name}</strong>
+                  <span>{item.profile.profile_type.replaceAll("_", " ")}</span>
+                  <small>{item.profile.description ?? "Mapping profile"}</small>
+                </button>
+              ) : (
+                <article key={`planned:${item.capability}`} className="template-card planned">
+                  <strong>{item.capability}</strong>
+                  <span>Planned template capability</span>
+                </article>
+              ),
+            )}
           </div>
         </section>
 

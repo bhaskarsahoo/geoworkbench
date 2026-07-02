@@ -115,93 +115,97 @@ export function ExportCenter({
       </div>
 
       <div className="workflow-center-grid export-grid">
-        <section className="workflow-panel primary">
-          <div className="workflow-panel-header">
-            <strong>Export Settings</strong>
-            <span>{selectedFormat.target}</span>
-          </div>
-          <div className="export-settings large">
-            <label>
-              Format
-              <select value={format} onChange={(event) => setFormat(event.target.value)}>
-                {EXPORT_FORMATS.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Correction stage
-              <select value={stage} onChange={(event) => setStage(event.target.value)}>
-                <option value="raw">Raw source</option>
-                <option value="field_submitted">Field submitted</option>
-                <option value="central_corrected">Central corrected draft</option>
-                <option value="approved_final">Approved final</option>
-              </select>
-            </label>
-            <div className="export-depth-range">
-              <label>
-                From depth
-                <input value={fromDepth} onChange={(event) => setFromDepth(event.target.value)} />
-              </label>
-              <label>
-                To depth
-                <input value={toDepth} onChange={(event) => setToDepth(event.target.value)} />
-              </label>
+        <div className="workflow-column export-main-column">
+          <section className="workflow-panel primary">
+            <div className="workflow-panel-header">
+              <strong>Export Settings</strong>
+              <span>{selectedFormat.target}</span>
             </div>
-            <div className="export-section-grid">
-              {(Object.keys(sections) as Array<keyof typeof sections>).map((key) => (
-                <label key={key}>
-                  <input type="checkbox" checked={sections[key]} onChange={() => toggleSection(key)} />
-                  {key.replaceAll("_", " ")}
+            <div className="export-settings large">
+              <label>
+                Format
+                <select value={format} onChange={(event) => setFormat(event.target.value)}>
+                  {EXPORT_FORMATS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Correction stage
+                <select value={stage} onChange={(event) => setStage(event.target.value)}>
+                  <option value="raw">Raw source</option>
+                  <option value="field_submitted">Field submitted</option>
+                  <option value="central_corrected">Central corrected draft</option>
+                  <option value="approved_final">Approved final</option>
+                </select>
+              </label>
+              <div className="export-depth-range">
+                <label>
+                  From depth
+                  <input value={fromDepth} onChange={(event) => setFromDepth(event.target.value)} />
                 </label>
+                <label>
+                  To depth
+                  <input value={toDepth} onChange={(event) => setToDepth(event.target.value)} />
+                </label>
+              </div>
+              <div className="export-section-grid">
+                {(Object.keys(sections) as Array<keyof typeof sections>).map((key) => (
+                  <label key={key}>
+                    <input type="checkbox" checked={sections[key]} onChange={() => toggleSection(key)} />
+                    {key.replaceAll("_", " ")}
+                  </label>
+                ))}
+              </div>
+              <div className="export-preview-card">
+                <strong>Configured package</strong>
+                <span>
+                  {selectedFormat.label} · {stage.replaceAll("_", " ")} · {fromDepth || 0}-
+                  {toDepth || data.total_depth}m
+                </span>
+                <small>{includedSections.join(", ")}</small>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="workflow-column export-side-column">
+          <section className="workflow-panel">
+            <div className="workflow-panel-header">
+              <strong>Readiness</strong>
+              <span>{readiness?.ready ? "Ready" : "Needs review"}</span>
+            </div>
+            <div className={`export-status ${readiness?.ready ? "ready" : "blocked"}`}>
+              <strong>{readiness?.ready ? "Ready for export" : "Review before export"}</strong>
+              <span>{readiness?.status ?? "checking"}</span>
+            </div>
+            <div className="export-actions">
+              <button type="button" disabled={approving} onClick={onApprove}>
+                {approving ? "Approving..." : "Approve for export"}
+              </button>
+              <button type="button" disabled={creating} onClick={() => onCreate(exportType)}>
+                {creating ? "Generating..." : "Generate export"}
+              </button>
+            </div>
+          </section>
+
+          <section className="workflow-panel export-field-mapping-panel">
+            <div className="workflow-panel-header">
+              <strong>Export Field Mapping</strong>
+              <span>{selectedFormat.label}</span>
+            </div>
+            <div className="export-mapping-grid compact">
+              {mappingRows.map((row) => (
+                <article key={`${row.source}:${row.target}`}>
+                  <strong>{row.source}</strong>
+                  <span>{row.target}</span>
+                </article>
               ))}
             </div>
-            <div className="export-preview-card">
-              <strong>Configured package</strong>
-              <span>
-                {selectedFormat.label} · {stage.replaceAll("_", " ")} · {fromDepth || 0}-
-                {toDepth || data.total_depth}m
-              </span>
-              <small>{includedSections.join(", ")}</small>
-            </div>
-          </div>
-        </section>
-
-        <section className="workflow-panel">
-          <div className="workflow-panel-header">
-            <strong>Readiness</strong>
-            <span>{readiness?.ready ? "Ready" : "Needs review"}</span>
-          </div>
-          <div className={`export-status ${readiness?.ready ? "ready" : "blocked"}`}>
-            <strong>{readiness?.ready ? "Ready for export" : "Review before export"}</strong>
-            <span>{readiness?.status ?? "checking"}</span>
-          </div>
-          <div className="export-actions">
-            <button type="button" disabled={approving} onClick={onApprove}>
-              {approving ? "Approving..." : "Approve for export"}
-            </button>
-            <button type="button" disabled={creating} onClick={() => onCreate(exportType)}>
-              {creating ? "Generating..." : "Generate export"}
-            </button>
-          </div>
-        </section>
-
-        <section className="workflow-panel wide">
-          <div className="workflow-panel-header">
-            <strong>Export Field Mapping</strong>
-            <span>{selectedFormat.label}</span>
-          </div>
-          <div className="export-mapping-grid">
-            {mappingRows.map((row) => (
-              <article key={`${row.source}:${row.target}`}>
-                <strong>{row.source}</strong>
-                <span>{row.target}</span>
-              </article>
-            ))}
-          </div>
-        </section>
+          </section>
+        </div>
 
         <section className="workflow-panel wide">
           <div className="workflow-panel-header">
