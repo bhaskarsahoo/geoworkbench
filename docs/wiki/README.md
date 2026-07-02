@@ -17,6 +17,7 @@ Every milestone should update this wiki as part of delivery. The system should b
 
 ## Current Architecture Guides
 
+- [UAT Demo Readiness](uat-demo-readiness.md)
 - [Development Architecture](architecture/development-architecture.md)
 - [Backend Architecture](architecture/backend-architecture.md)
 - [Frontend Architecture](architecture/frontend-architecture.md)

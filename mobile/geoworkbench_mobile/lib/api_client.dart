@@ -3,11 +3,47 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class GeoWorkbenchApi {
-  GeoWorkbenchApi(this.baseUrl);
+  GeoWorkbenchApi(this.baseUrl, {this.token});
 
   final String baseUrl;
+  final String? token;
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
+
+  Map<String, String> get _jsonHeaders => {
+        'Content-Type': 'application/json',
+        if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
+      };
+
+  Future<Map<String, dynamic>> requestMobileOtp({
+    required String username,
+  }) async {
+    final response = await http.post(
+      _uri('/api/auth/mobile/request-otp'),
+      headers: _jsonHeaders,
+      body: jsonEncode({
+        'username': username,
+        'push_token': 'android-demo-device',
+      }),
+    );
+    return _decode(response);
+  }
+
+  Future<Map<String, dynamic>> verifyMobileOtp({
+    required String username,
+    required String otp,
+  }) async {
+    final response = await http.post(
+      _uri('/api/auth/mobile/verify-otp'),
+      headers: _jsonHeaders,
+      body: jsonEncode({
+        'username': username,
+        'otp': otp,
+        'push_token': 'android-demo-device',
+      }),
+    );
+    return _decode(response);
+  }
 
   Future<Map<String, dynamic>> createDemoCopy({
     required int sourceBoreholeId,
@@ -15,7 +51,7 @@ class GeoWorkbenchApi {
   }) async {
     final response = await http.post(
       _uri('/api/mobile/demo-copy'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _jsonHeaders,
       body: jsonEncode({
         'source_borehole_id': sourceBoreholeId,
         'new_code': newCode,
@@ -37,7 +73,7 @@ class GeoWorkbenchApi {
   }) async {
     final response = await http.post(
       _uri('/api/mobile/boreholes'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _jsonHeaders,
       body: jsonEncode({
         'project_code': projectCode,
         'project_name': projectName,
@@ -75,7 +111,7 @@ class GeoWorkbenchApi {
     final toDepth = lithologyFromDepth + lithologyThickness;
     final response = await http.post(
       _uri('/api/mobile/field-submissions'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _jsonHeaders,
       body: jsonEncode({
         'borehole_id': boreholeId,
         'submitted_by': 'android-demo-user',
@@ -123,6 +159,9 @@ class GeoWorkbenchApi {
     required String filePath,
   }) async {
     final request = http.MultipartRequest('POST', _uri('/api/mobile/uploads'));
+    if (token != null && token!.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
     request.fields['borehole_id'] = boreholeId.toString();
     request.fields['file_type'] = fileType;
     request.files.add(await http.MultipartFile.fromPath('file', filePath));

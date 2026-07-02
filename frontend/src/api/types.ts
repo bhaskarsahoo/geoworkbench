@@ -8,6 +8,52 @@ export type BoreholeListItem = {
   project_code: string;
 };
 
+export type User = {
+  id: number;
+  username: string;
+  display_name: string;
+  role: string;
+  email: string | null;
+  auth_provider: string;
+  mobile_number: string | null;
+  is_active: number;
+  failed_login_count: number;
+  locked_until: string | null;
+  last_login_at: string | null;
+};
+
+export type Role = {
+  key: string;
+  label: string;
+  description: string;
+};
+
+export type AuthToken = {
+  token: string;
+  user: User;
+  expires_at: string;
+};
+
+export type AuthSession = {
+  user: User;
+  expires_at: string;
+  client_type: string;
+};
+
+export type DiagnosticsHealth = {
+  status: string;
+  service: string;
+  checked_at: string;
+  database: { status: string; detail: string };
+  ai: { provider: string; model: string };
+  uploads: string;
+  exports: string;
+  observability: {
+    request_timing_header: string;
+    otel_ready: boolean;
+  };
+};
+
 export type BoreholeStatus = {
   id: number;
   code: string;

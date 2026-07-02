@@ -81,6 +81,8 @@ class FieldSyncScreen extends StatefulWidget {
 
 class _FieldSyncScreenState extends State<FieldSyncScreen> {
   final _baseUrl = TextEditingController(text: 'http://10.0.2.2:8081');
+  final _username = TextEditingController(text: 'field');
+  final _otp = TextEditingController();
   final _newCode = TextEditingController(text: 'CTSJ-30-P-02-ANDROID-DEMO');
   final _projectCode = TextEditingController(text: 'DEMO-COAL');
   final _projectName = TextEditingController(text: 'Demo Coal Block');
@@ -110,7 +112,11 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
   int? _createdBoreholeId;
   String _status = 'Ready';
   String _busyLabel = '';
-  String _openSection = 'create-empty';
+  String _openSection = 'auth';
+  String? _authToken;
+  String? _displayName;
+  String? _role;
+  String? _devOtp;
   bool _busy = false;
   final List<_RuntimeParameterInput> _runtimeParameters = [
     _RuntimeParameterInput(
@@ -125,11 +131,12 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
     ),
   ];
 
-  GeoWorkbenchApi get _api => GeoWorkbenchApi(_baseUrl.text.trim());
+  GeoWorkbenchApi get _api => GeoWorkbenchApi(_baseUrl.text.trim(), token: _authToken);
   final _imagePicker = ImagePicker();
 
   bool get _canSyncInterval =>
       !_busy &&
+      _authToken != null &&
       _createdBoreholeId != null &&
       _runFromDepth.text.trim().isNotEmpty &&
       _runToDepth.text.trim().isNotEmpty &&
@@ -141,6 +148,8 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
   @override
   void dispose() {
     _baseUrl.dispose();
+    _username.dispose();
+    _otp.dispose();
     _newCode.dispose();
     _projectCode.dispose();
     _projectName.dispose();
@@ -178,7 +187,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
     return double.parse(text);
   }
 
-  Future<void> _run(String label, Future<Map<String, dynamic>> Function() action) async {
+  Future<Map<String, dynamic>?> _run(String label, Future<Map<String, dynamic>> Function() action) async {
     setState(() {
       _busy = true;
       _busyLabel = label;
@@ -187,12 +196,18 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
     try {
       final result = await action();
       final borehole = result['borehole'] as Map<String, dynamic>?;
+      final user = result['user'] as Map<String, dynamic>?;
       setState(() {
         _createdBoreholeId = borehole?['id'] as int? ?? _createdBoreholeId;
+        _authToken = result['token']?.toString() ?? _authToken;
+        _displayName = user?['display_name']?.toString() ?? _displayName;
+        _role = user?['role']?.toString() ?? _role;
         _status = result['message']?.toString() ?? 'Done';
       });
+      return result;
     } catch (error) {
       setState(() => _status = error.toString());
+      return null;
     } finally {
       setState(() {
         _busy = false;
@@ -280,6 +295,33 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
     }
   }
 
+  Future<void> _requestOtp() async {
+    final result = await _run(
+      'Requesting OTP',
+      () => _api.requestMobileOtp(username: _username.text.trim()),
+    );
+    if (result != null) {
+      setState(() {
+        _devOtp = result['dev_otp']?.toString();
+        if (_devOtp != null) _otp.text = _devOtp!;
+        _status = result['message']?.toString() ?? 'OTP requested.';
+      });
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    final result = await _run(
+      'Signing in',
+      () => _api.verifyMobileOtp(
+        username: _username.text.trim(),
+        otp: _otp.text.trim(),
+      ),
+    );
+    if (result != null) {
+      setState(() => _openSection = 'create-empty');
+    }
+  }
+
   void _prepareNextInterval() {
     final nextFrom = _number(_lithologyFromDepth) + _number(_lithologyThickness);
     final nextRunTo = nextFrom + 3;
@@ -359,10 +401,53 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
                 : 'Central id $_createdBoreholeId',
             siteCode: _siteCode.text.trim(),
             currentDepth: _lithologyFromDepth.text.trim(),
+            userLabel: _displayName ?? 'Not signed in',
+            roleLabel: _role?.replaceAll('_', ' ') ?? 'field authorization pending',
             busy: _busy,
             busyLabel: _busyLabel,
           ),
           const SizedBox(height: 14),
+          _Section(
+            id: 'auth',
+            openId: _openSection,
+            onToggle: _toggleSection,
+            title: 'Secure Field Login',
+            icon: Icons.verified_user,
+            children: [
+              TextField(
+                controller: _username,
+                decoration: const InputDecoration(labelText: 'Username'),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _busy ? null : _requestOtp,
+                      icon: const Icon(Icons.password),
+                      label: Text(_busy && _busyLabel == 'Requesting OTP' ? 'Requesting...' : 'Request OTP'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _otp,
+                      decoration: InputDecoration(
+                        labelText: 'OTP',
+                        helperText: _devOtp == null ? 'Push/dev OTP' : 'Dev OTP: $_devOtp',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              FilledButton.icon(
+                onPressed: _busy || _otp.text.trim().isEmpty ? null : _verifyOtp,
+                icon: const Icon(Icons.login),
+                label: Text(_busy && _busyLabel == 'Signing in' ? 'Signing in...' : 'Sign in to sync'),
+              ),
+              if (_authToken != null)
+                Text('Signed in as ${_displayName ?? _username.text} (${_role ?? 'field user'})'),
+            ],
+          ),
           _Section(
             id: 'backend',
             openId: _openSection,
@@ -422,7 +507,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
                 ],
               ),
               FilledButton.icon(
-                onPressed: _busy
+                onPressed: _busy || _authToken == null
                     ? null
                     : () => _run(
                           'Creating empty borehole',
@@ -464,7 +549,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
                 decoration: const InputDecoration(labelText: 'New borehole code'),
               ),
               FilledButton.icon(
-                onPressed: _busy
+                onPressed: _busy || _authToken == null
                     ? null
                     : () => _run(
                           'Creating mobile demo copy',
@@ -636,7 +721,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
                 onChanged: (value) => setState(() => _fileType = value ?? 'excel'),
               ),
               FilledButton.icon(
-                onPressed: _busy || _createdBoreholeId == null ? null : _pickAndUpload,
+                onPressed: _busy || _authToken == null || _createdBoreholeId == null ? null : _pickAndUpload,
                 icon: const Icon(Icons.attach_file),
                 label: Text(_busy && _busyLabel.startsWith('Uploading')
                     ? 'Uploading...'
@@ -652,7 +737,7 @@ class _FieldSyncScreenState extends State<FieldSyncScreen> {
                 onChanged: (value) => setState(() => _cameraType = value ?? 'corebox_image'),
               ),
               FilledButton.icon(
-                onPressed: _busy || _createdBoreholeId == null ? null : _captureAndUpload,
+                onPressed: _busy || _authToken == null || _createdBoreholeId == null ? null : _captureAndUpload,
                 icon: const Icon(Icons.photo_camera),
                 label: Text(_busy && _busyLabel.startsWith('Uploading captured')
                     ? 'Uploading photo...'
@@ -722,6 +807,8 @@ class _FieldHeaderCard extends StatelessWidget {
     required this.boreholeCode,
     required this.siteCode,
     required this.currentDepth,
+    required this.userLabel,
+    required this.roleLabel,
     required this.busy,
     required this.busyLabel,
   });
@@ -729,6 +816,8 @@ class _FieldHeaderCard extends StatelessWidget {
   final String boreholeCode;
   final String siteCode;
   final String currentDepth;
+  final String userLabel;
+  final String roleLabel;
   final bool busy;
   final String busyLabel;
 
@@ -809,6 +898,11 @@ class _FieldHeaderCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            _HeaderMetric(
+              label: userLabel,
+              value: roleLabel,
             ),
             const SizedBox(height: 12),
             Container(

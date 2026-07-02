@@ -1,8 +1,15 @@
-from fastapi import FastAPI
+import logging
+import time
+from datetime import datetime, timezone
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from app.core.config import get_settings
+from app.db.init_db import init_db
+from app.db.session import engine
 from app.domains.boreholes.router import router as borehole_router
 from app.domains.ai.router import router as ai_router
 from app.domains.auth.router import router as auth_router
@@ -13,6 +20,8 @@ from app.domains.validation.router import router as validation_router
 
 
 settings = get_settings()
+logger = logging.getLogger("geoworkbench.api")
+init_db()
 app = FastAPI(title=settings.app_name)
 
 app.add_middleware(
@@ -32,6 +41,47 @@ app.include_router(imports_router, prefix=f"{settings.api_prefix}/imports", tags
 app.include_router(mobile_router, prefix=f"{settings.api_prefix}/mobile", tags=["mobile"])
 app.include_router(validation_router, prefix=f"{settings.api_prefix}/validation", tags=["validation"])
 
+
+@app.middleware("http")
+async def request_timing(request: Request, call_next):
+    started = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+    response.headers["X-GeoWorkbench-Request-Ms"] = str(elapsed_ms)
+    logger.info(
+        "request method=%s path=%s status=%s elapsed_ms=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+    )
+    return response
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get(f"{settings.api_prefix}/diagnostics/health")
+def diagnostics_health() -> dict:
+    database = "ok"
+    database_detail = "select 1"
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("select 1"))
+    except Exception as exc:  # pragma: no cover - defensive diagnostics path
+        database = "error"
+        database_detail = str(exc)
+    return {
+        "status": "ok" if database == "ok" else "degraded",
+        "service": settings.app_name,
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+        "database": {"status": database, "detail": database_detail},
+        "ai": {"provider": settings.ai_provider, "model": settings.ai_model},
+        "uploads": str(settings.upload_root),
+        "exports": str(settings.export_root),
+        "observability": {
+            "request_timing_header": "X-GeoWorkbench-Request-Ms",
+            "otel_ready": True,
+        },
+    }

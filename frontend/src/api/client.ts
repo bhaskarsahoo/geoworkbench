@@ -8,22 +8,113 @@ import type {
   ExportReadiness,
   ImportProfile,
   LithologyInterval,
+  Role,
   SourceFile,
   ValidationIssue,
   AiSuggestion,
+  AuthSession,
+  AuthToken,
+  DiagnosticsHealth,
+  User,
 } from "./types";
 
 const API_BASE = "/api";
+const TOKEN_KEY = "geoworkbench.auth.token";
+
+export function getAuthToken(): string | null {
+  return window.localStorage.getItem(TOKEN_KEY);
+}
+
+export function setAuthToken(token: string | null): void {
+  if (token) window.localStorage.setItem(TOKEN_KEY, token);
+  else window.localStorage.removeItem(TOKEN_KEY);
+}
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  const token = getAuthToken();
   const response = await fetch(`${API_BASE}${url}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init?.headers,
+    },
     ...init,
   });
   if (!response.ok) {
     throw new Error(await response.text());
   }
   return response.json() as Promise<T>;
+}
+
+export function login(username: string, password: string): Promise<AuthToken> {
+  return request<AuthToken>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+}
+
+export function startEntraLogin(): void {
+  window.location.assign(`${API_BASE}/auth/entra/login`);
+}
+
+export function getCurrentSession(): Promise<AuthSession> {
+  return request<AuthSession>("/auth/me");
+}
+
+export function logout(): Promise<{ status: string }> {
+  return request<{ status: string }>("/auth/logout", { method: "POST" });
+}
+
+export function getDiagnosticsHealth(): Promise<DiagnosticsHealth> {
+  return request<DiagnosticsHealth>("/diagnostics/health");
+}
+
+export function listRoles(): Promise<Role[]> {
+  return request<Role[]>("/auth/roles");
+}
+
+export function listUsers(): Promise<User[]> {
+  return request<User[]>("/auth/users");
+}
+
+export function createUser(payload: {
+  username: string;
+  display_name: string;
+  role: string;
+  password: string;
+  email?: string | null;
+  mobile_number?: string | null;
+  is_active?: number;
+}): Promise<User> {
+  return request<User>("/auth/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateUser(userId: number, payload: Partial<User>): Promise<User> {
+  return request<User>(`/auth/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deactivateUser(userId: number): Promise<User> {
+  return request<User>(`/auth/users/${userId}`, { method: "DELETE" });
+}
+
+export function resetUserPassword(userId: number, newPassword: string): Promise<User> {
+  return request<User>(`/auth/users/${userId}/reset-password`, {
+    method: "POST",
+    body: JSON.stringify({ new_password: newPassword }),
+  });
+}
+
+export function changePassword(currentPassword: string, newPassword: string): Promise<{ status: string }> {
+  return request<{ status: string }>("/auth/password/change", {
+    method: "POST",
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
 }
 
 export function listBoreholes(): Promise<BoreholeListItem[]> {
@@ -106,8 +197,10 @@ export async function uploadSourceFile(payload: {
   if (payload.borehole_id !== null) {
     form.append("borehole_id", String(payload.borehole_id));
   }
+  const token = getAuthToken();
   const response = await fetch(`${API_BASE}/imports/upload`, {
     method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: form,
   });
   if (!response.ok) {

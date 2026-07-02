@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     ai_timeout_seconds: float = 45
     auth_token_hours: int = 12
     mobile_otp_minutes: int = 10
+    web_base_url: str = "http://127.0.0.1:5173"
+    entra_tenant_id: str | None = None
+    entra_client_id: str | None = None
+    entra_client_secret: str | None = None
+    entra_redirect_uri: str = "http://localhost:8081/api/auth/entra/callback"
+    entra_allowed_domain: str | None = None
+    entra_default_role: str = "central_geologist"
     push_provider: str = "disabled"
     push_fcm_server_key: str | None = None
     push_apns_key_id: str | None = None
